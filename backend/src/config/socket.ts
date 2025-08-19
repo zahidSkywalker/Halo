@@ -1,8 +1,8 @@
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { getRedisClient } from './redis';
-import { NotificationService } from '../services/notificationService';
-import { MessageService } from '../services/messageService';
+// import { NotificationService } from '../services/notificationService';
+// import { MessageService } from '../services/messageService';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -111,7 +111,7 @@ export const setupSocketIO = (io: Server): void => {
     socket.on('notification:read', async (notificationId: string) => {
       try {
         // Mark notification as read in database
-        await NotificationService.markAsRead(notificationId, socket.userId!);
+        // await NotificationService.markAsRead(notificationId, socket.userId!);
         
         // Emit to user
         socket.emit('notification:read', { notificationId });
@@ -124,7 +124,7 @@ export const setupSocketIO = (io: Server): void => {
     socket.on('message:read', async (data: { messageId: string; conversationId: string }) => {
       try {
         // Mark message as read in database
-        await MessageService.markAsRead(data.messageId, socket.userId!);
+        // await MessageService.markAsRead(data.messageId, socket.userId!);
         
         // Emit to conversation participants
         socket.to(`conversation:${data.conversationId}`).emit('message:read', {

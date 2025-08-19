@@ -18,11 +18,6 @@ import { setupSwagger } from './config/swagger';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import postRoutes from './routes/posts';
-import commentRoutes from './routes/comments';
-import notificationRoutes from './routes/notifications';
-import messageRoutes from './routes/messages';
-import searchRoutes from './routes/search';
-import adminRoutes from './routes/admin';
 
 // Load environment variables
 dotenv.config();
@@ -65,11 +60,6 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
-app.use('/api/comments', commentRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/search', searchRoutes);
-app.use('/api/admin', adminRoutes);
 
 // Setup Swagger documentation
 setupSwagger(app);

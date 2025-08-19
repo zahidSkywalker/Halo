@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { getDatabase } from '../config/database';
-import { UserRole } from '../../shared/types';
+// import { UserRole } from '../../shared/types';
 
 const database = getDatabase();
 
@@ -26,7 +26,7 @@ async function seedDatabase(): Promise<void> {
       adminPassword,
       'System administrator for HALO platform',
       true,
-      UserRole.ADMIN,
+      'admin',
       true
     ]);
 
@@ -43,7 +43,7 @@ async function seedDatabase(): Promise<void> {
       userPassword,
       'A test user for demonstration purposes',
       true,
-      UserRole.USER,
+      'user',
       true
     ]);
 
@@ -94,7 +94,7 @@ async function seedDatabase(): Promise<void> {
         user.password,
         user.bio,
         true,
-        UserRole.USER,
+        'user',
         true
       ]);
 
@@ -104,7 +104,7 @@ async function seedDatabase(): Promise<void> {
     }
 
     // Get all user IDs for creating relationships
-    const allUsersResult = await database.query('SELECT id FROM users WHERE role = $1', [UserRole.USER]);
+    const allUsersResult = await database.query('SELECT id FROM users WHERE role = $1', ['user']);
     const allUserIds = allUsersResult.rows.map(row => row.id);
 
     // Create follow relationships

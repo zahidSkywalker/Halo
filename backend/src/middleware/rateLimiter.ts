@@ -7,7 +7,7 @@ const redis = getRedisClient();
 
 // General rate limiter
 const generalLimiter = new RateLimiterRedis({
-  storeClient: redis.client,
+  storeClient: redis.rateLimiterClient,
   keyPrefix: 'general',
   points: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
   duration: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000') / 1000, // Convert to seconds
@@ -16,7 +16,7 @@ const generalLimiter = new RateLimiterRedis({
 
 // Auth rate limiter (more strict)
 const authLimiter = new RateLimiterRedis({
-  storeClient: redis.client,
+  storeClient: redis.rateLimiterClient,
   keyPrefix: 'auth',
   points: 5, // 5 attempts
   duration: 60 * 15, // 15 minutes
@@ -25,7 +25,7 @@ const authLimiter = new RateLimiterRedis({
 
 // Upload rate limiter
 const uploadLimiter = new RateLimiterRedis({
-  storeClient: redis.client,
+  storeClient: redis.rateLimiterClient,
   keyPrefix: 'upload',
   points: 10, // 10 uploads
   duration: 60 * 60, // 1 hour
@@ -34,7 +34,7 @@ const uploadLimiter = new RateLimiterRedis({
 
 // Search rate limiter
 const searchLimiter = new RateLimiterRedis({
-  storeClient: redis.client,
+  storeClient: redis.rateLimiterClient,
   keyPrefix: 'search',
   points: 30, // 30 searches
   duration: 60 * 5, // 5 minutes
@@ -162,7 +162,7 @@ export const userRateLimiter = async (req: Request, res: Response, next: NextFun
     }
 
     const userLimiter = new RateLimiterRedis({
-      storeClient: redis.client,
+      storeClient: redis.rateLimiterClient,
       keyPrefix: `user:${userId}`,
       points: 1000, // 1000 requests
       duration: 60 * 60, // 1 hour

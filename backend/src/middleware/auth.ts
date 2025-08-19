@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthenticationError, AuthorizationError } from './errorHandler';
 import { getRedisClient } from '../config/redis';
-import { UserRole } from '../../shared/types';
+// import { UserRole } from '../../shared/types';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -12,7 +12,7 @@ interface AuthenticatedRequest extends Request {
     displayName: string;
     profilePicture?: string;
     isVerified: boolean;
-    role: UserRole;
+    role: string;
   };
 }
 
@@ -116,7 +116,7 @@ export const optionalAuth = async (
 };
 
 // Require specific role
-export const requireRole = (roles: UserRole[]) => {
+export const requireRole = (roles: string[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AuthenticationError('Authentication required');
@@ -131,10 +131,10 @@ export const requireRole = (roles: UserRole[]) => {
 };
 
 // Require admin role
-export const requireAdmin = requireRole([UserRole.ADMIN]);
+export const requireAdmin = requireRole(['admin']);
 
 // Require moderator or admin role
-export const requireModerator = requireRole([UserRole.MODERATOR, UserRole.ADMIN]);
+export const requireModerator = requireRole(['moderator', 'admin']);
 
 // Require verified user
 export const requireVerified = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
@@ -156,7 +156,7 @@ export const requireOwnership = (resourceUserId: string) => {
       throw new AuthenticationError('Authentication required');
     }
 
-    if (req.user.id !== resourceUserId && req.user.role !== UserRole.ADMIN) {
+    if (req.user.id !== resourceUserId && req.user.role !== 'admin') {
       throw new AuthorizationError('Access denied');
     }
 
@@ -180,7 +180,7 @@ export const canAccessProfile = (profileUserId: string, isPrivate: boolean) => {
     }
 
     // Admins can see all profiles
-    if (req.user.role === UserRole.ADMIN) {
+    if (req.user.role === 'admin') {
       return next();
     }
 
@@ -208,7 +208,7 @@ export const generateAccessToken = (user: any): string => {
       role: user.role
     },
     process.env.JWT_SECRET!,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: '7d' }
   );
 };
 
@@ -217,7 +217,7 @@ export const generateRefreshToken = (user: any): string => {
   return jwt.sign(
     { userId: user.id },
     process.env.JWT_SECRET!,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
+    { expiresIn: '30d' }
   );
 };
 

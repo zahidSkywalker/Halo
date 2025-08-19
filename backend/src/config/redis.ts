@@ -202,6 +202,11 @@ class RedisClient {
       throw error;
     }
   }
+
+  // Get client for rate limiter
+  get rateLimiterClient(): any {
+    return this.client;
+  }
 }
 
 // Create singleton instance

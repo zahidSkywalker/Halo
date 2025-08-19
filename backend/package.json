@@ -42,7 +42,7 @@
     "redis": "^4.6.10",
     "socket.io": "^4.7.4",
     "nodemailer": "^6.9.7",
-    "rate-limiter-flexible": "^3.0.8",
+    "rate-limiter-flexible": "^2.4.2",
     "compression": "^1.7.4",
     "express-rate-limit": "^7.1.5",
     "swagger-jsdoc": "^6.2.8",
