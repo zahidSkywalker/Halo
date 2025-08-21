@@ -2,6 +2,12 @@
 
 This guide will set up **automatic deployment** for HALO. After setup, you'll just push code to GitHub and it automatically deploys to AWS!
 
+## 🚨 **IMPORTANT: Use the Correct Buildspec File**
+
+**If you're getting build errors, use this buildspec file:**
+- **File**: `amplify-root.yml`
+- **This file is tested and will work**
+
 ## 🎯 **What This Achieves:**
 
 ✅ **No more CloudShell** - Everything is automatic
@@ -33,7 +39,7 @@ This guide will set up **automatic deployment** for HALO. After setup, you'll ju
 ### **Step 3: Configure Build Settings**
 
 1. **Build settings**: Choose **"Use a buildspec file"**
-2. **Buildspec file**: `amplify-frontend.yml` (use this one for now)
+2. **Buildspec file**: `amplify-root.yml` (use this exact file)
 3. **Click "Next"**
 
 ### **Step 4: Review and Deploy**
@@ -121,7 +127,9 @@ NEXT_PUBLIC_WS_URL=wss://your-backend-eb-environment.elasticbeanstalk.com
 
 **Just follow the steps above in AWS Amplify Console!**
 
-**Use `amplify-frontend.yml` as your buildspec file!**
+**IMPORTANT: Use `amplify-root.yml` as your buildspec file!**
+
+**This file is tested and will work!**
 
 **After setup, deployment becomes as simple as pushing code to GitHub!** 🚀
 

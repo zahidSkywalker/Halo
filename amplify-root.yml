@@ -3,15 +3,20 @@ frontend:
   phases:
     preBuild:
       commands:
-        - echo "Starting frontend build..."
+        - echo "Current directory: $(pwd)"
+        - echo "Listing files:"
+        - ls -la
+        - echo "Changing to frontend directory..."
         - cd frontend
-        - echo "Installing frontend dependencies..."
+        - echo "Frontend directory contents:"
+        - ls -la
+        - echo "Installing dependencies..."
         - npm install
     build:
       commands:
         - echo "Building frontend..."
         - npm run build
-        - echo "Frontend build completed!"
+        - echo "Build completed!"
   artifacts:
     baseDirectory: frontend/.next
     files:
