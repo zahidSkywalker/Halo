@@ -3,31 +3,33 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        - cd frontend
+        - npm install
     build:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: .next
+    baseDirectory: frontend/.next
     files:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
-      - .next/cache/**/*
+      - frontend/node_modules/**/*
+      - frontend/.next/cache/**/*
 
 backend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        - cd backend
+        - npm install
     build:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: dist
+    baseDirectory: backend/dist
     files:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
+      - backend/node_modules/**/*

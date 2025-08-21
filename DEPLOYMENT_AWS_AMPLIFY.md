@@ -33,7 +33,7 @@ This guide will set up **automatic deployment** for HALO. After setup, you'll ju
 ### **Step 3: Configure Build Settings**
 
 1. **Build settings**: Choose **"Use a buildspec file"**
-2. **Buildspec file**: `amplify.yml` (already created)
+2. **Buildspec file**: `amplify-frontend.yml` (use this one for now)
 3. **Click "Next"**
 
 ### **Step 4: Review and Deploy**
@@ -48,13 +48,13 @@ This guide will set up **automatic deployment** for HALO. After setup, you'll ju
 
 ### **Automatic Process:**
 1. **AWS Amplify** clones your GitHub repository
-2. **Builds** your frontend and backend
+2. **Builds** your frontend (Next.js app)
 3. **Deploys** to AWS infrastructure
-4. **Provides URLs** for your application
+4. **Provides URL** for your application
 
 ### **After Deployment:**
 - **Frontend URL**: `https://main.xxxxx.amplifyapp.com`
-- **Backend API**: `https://your-backend-eb-environment.elasticbeanstalk.com`
+- **Backend API**: Will deploy separately to Elastic Beanstalk
 - **Automatic updates**: Every time you push to GitHub
 
 ---
@@ -67,9 +67,27 @@ This guide will set up **automatic deployment** for HALO. After setup, you'll ju
 
 ```bash
 NODE_ENV=production
-BACKEND_URL=https://your-backend-eb-environment.elasticbeanstalk.com
-FRONTEND_URL=https://main.xxxxx.amplifyapp.com
+NEXT_PUBLIC_API_URL=https://your-backend-eb-environment.elasticbeanstalk.com
+NEXT_PUBLIC_WS_URL=wss://your-backend-eb-environment.elasticbeanstalk.com
 ```
+
+---
+
+## 🎯 **Why Frontend-Only for Now:**
+
+✅ **Simpler deployment** - Less chance of errors
+✅ **Faster setup** - Get something working first
+✅ **Easier debugging** - Frontend issues are easier to fix
+✅ **Backend later** - We'll deploy backend separately
+
+---
+
+## 🚀 **After Frontend is Deployed:**
+
+### **Next Steps:**
+1. **Deploy backend to Elastic Beanstalk** (separate process)
+2. **Connect frontend to backend** (update environment variables)
+3. **Test the complete application**
 
 ---
 
@@ -102,6 +120,8 @@ FRONTEND_URL=https://main.xxxxx.amplifyapp.com
 ## 🎉 **Ready to Set Up Automatic Deployment?**
 
 **Just follow the steps above in AWS Amplify Console!**
+
+**Use `amplify-frontend.yml` as your buildspec file!**
 
 **After setup, deployment becomes as simple as pushing code to GitHub!** 🚀
 
