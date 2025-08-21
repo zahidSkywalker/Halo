@@ -6,6 +6,14 @@ import { UserService } from './userService';
 const database = getDatabase();
 
 export class PostService {
+  // Get total number of posts
+  static async getTotalPosts(): Promise<number> {
+    const result = await database.query(
+      'SELECT COUNT(*) as count FROM posts WHERE is_deleted = false'
+    );
+    return parseInt(result.rows[0].count);
+  }
+
   // Create a new post
   static async createPost(authorId: string, postData: CreatePostData): Promise<Post> {
     const { content, media, hashtags, mentions } = postData;

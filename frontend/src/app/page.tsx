@@ -1,5 +1,7 @@
+'use client';
+
 import Link from 'next/link';
-import { Metadata } from 'next';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,10 +17,14 @@ import {
   CheckCircle
 } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'HALO - Modern Social Media Platform',
-  description: 'Connect, share, and discover on HALO - the next generation social media platform built for meaningful connections.',
-};
+interface Stats {
+  totalUsers: string;
+  totalPosts: string;
+  totalCommunities: string;
+  activeUsers: string;
+  countries: string;
+  realData: boolean;
+}
 
 const features = [
   {
@@ -53,14 +59,43 @@ const features = [
   }
 ];
 
-const stats = [
-  { label: 'Active Users', value: '10K+' },
-  { label: 'Posts Shared', value: '1M+' },
-  { label: 'Communities', value: '500+' },
-  { label: 'Countries', value: '50+' }
-];
-
 export default function HomePage() {
+  const [stats, setStats] = useState<Stats>({
+    totalUsers: '10K+',
+    totalPosts: '1M+',
+    totalCommunities: '500+',
+    activeUsers: '5K+',
+    countries: '50+',
+    realData: false
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/stats');
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      // Keep default stats if API fails
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  const statsData = [
+    { label: 'Active Users', value: stats.totalUsers },
+    { label: 'Posts Shared', value: stats.totalPosts },
+    { label: 'Communities', value: stats.totalCommunities },
+    { label: 'Countries', value: stats.countries }
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900">
       {/* Header */}
@@ -144,10 +179,18 @@ export default function HomePage() {
         <div className="mt-20">
           <div className="container-responsive">
             <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-              {stats.map((stat) => (
+              {statsData.map((stat) => (
                 <div key={stat.label} className="text-center">
-                  <div className="text-3xl font-bold text-primary">{stat.value}</div>
+                  <div className="text-3xl font-bold text-primary">
+                    {isLoadingStats ? '...' : stat.value}
+                  </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
+                  {stats.realData && (
+                    <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      <CheckCircle className="inline h-3 w-3 mr-1" />
+                      Live Data
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

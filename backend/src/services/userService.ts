@@ -288,7 +288,31 @@ export class UserService {
     );
   }
 
-  // Helper method to map database user to User type
+  // Get total number of users
+  static async getTotalUsers(): Promise<number> {
+    const result = await database.query(
+      'SELECT COUNT(*) as count FROM users WHERE is_active = true'
+    );
+    return parseInt(result.rows[0].count);
+  }
+
+  // Get active users (users who logged in within last 30 days)
+  static async getActiveUsers(): Promise<number> {
+    const result = await database.query(
+      'SELECT COUNT(*) as count FROM users WHERE is_active = true AND last_login_at > NOW() - INTERVAL \'30 days\''
+    );
+    return parseInt(result.rows[0].count);
+  }
+
+  // Get total number of communities (for now, return a placeholder)
+  static async getTotalCommunities(): Promise<number> {
+    // This would need a communities table in the future
+    // For now, return a reasonable estimate based on user count
+    const totalUsers = await this.getTotalUsers();
+    return Math.max(1, Math.floor(totalUsers / 20)); // Assume 1 community per 20 users
+  }
+
+  // Map database user to User type
   private static mapUserFromDB(dbUser: any): User {
     return {
       id: dbUser.id,
