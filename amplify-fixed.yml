@@ -1,0 +1,24 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Starting frontend build..."
+        - pwd
+        - ls -la
+        - cd frontend
+        - ls -la
+        - npm install
+    build:
+      commands:
+        - echo "Building frontend..."
+        - npm run build
+        - echo "Frontend build completed!"
+  artifacts:
+    baseDirectory: frontend/.next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - frontend/node_modules/**/*
+      - frontend/.next/cache/**/*
