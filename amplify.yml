@@ -4,7 +4,8 @@ frontend:
     preBuild:
       commands:
         - echo "Starting frontend build..."
-        - echo "Current directory: $(pwd)"
+        - echo "Current directory:"
+        - pwd
         - echo "Listing files:"
         - ls -la
         - echo "Changing to frontend directory..."
