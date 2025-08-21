@@ -1,0 +1,38 @@
+{
+  "appName": "halo-platform",
+  "version": "1.0.0",
+  "description": "HALO Social Media Platform - Full Stack Application",
+  "repository": "https://github.com/zahidSkywalker/Halo",
+  "buildSpec": "amplify.yml",
+  "environmentVariables": {
+    "NODE_ENV": "production",
+    "BACKEND_URL": "https://your-backend-eb-environment.elasticbeanstalk.com",
+    "FRONTEND_URL": "https://your-frontend-domain.com"
+  },
+  "customHeaders": [
+    {
+      "pattern": "**/*",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/api/*",
+      "target": "https://your-backend-eb-environment.elasticbeanstalk.com/api/$1",
+      "status": "200"
+    }
+  ]
+}
