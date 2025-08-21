@@ -9,7 +9,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
+        },
         primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
           50: '#eff6ff',
           100: '#dbeafe',
           200: '#bfdbfe',
@@ -23,6 +35,8 @@ module.exports = {
           950: '#172554',
         },
         secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
           50: '#f8fafc',
           100: '#f1f5f9',
           200: '#e2e8f0',
@@ -35,6 +49,21 @@ module.exports = {
           900: '#0f172a',
           950: '#020617',
         },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
         success: {
           50: '#f0fdf4',
           100: '#dcfce7',
