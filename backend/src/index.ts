@@ -6,6 +6,7 @@ import compression from 'compression';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
+import path from 'path';
 
 import { connectDatabase } from './config/database';
 import { connectRedis } from './config/redis';
@@ -46,6 +47,9 @@ app.use(compression());
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve static files
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Rate limiting
 app.use(rateLimiter);

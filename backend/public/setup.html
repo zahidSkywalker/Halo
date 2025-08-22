@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HALO Database Setup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 HALO Database Setup</h1>
+        <p>Use this page to initialize your database and create all required tables.</p>
+        
+        <div class="status-box">
+            <h3>📊 Current Status</h3>
+            <div id="status">Loading...</div>
+        </div>
+        
+        <div class="status-box">
+            <h3>🔧 Actions</h3>
+            <button onclick="checkStatus()">🔄 Check Status</button>
+            <button onclick="initDatabase()" id="initBtn">🚀 Initialize Database</button>
+        </div>
+        
+        <div class="status-box">
+            <h3>📝 Activity Log</h3>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://halo-backend-wye4.onrender.com/api/setup';
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        async function checkStatus() {
+            try {
+                log('🔍 Checking database status...', 'info');
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const statusHtml = `
+                        <div class="success">✅ Database Connected: Yes</div>
+                        <div class="${data.usersTableExists ? 'success' : 'warning'}">
+                            📋 Users Table: ${data.usersTableExists ? 'Exists' : 'Missing'}
+                        </div>
+                        <div class="info">💬 Message: ${data.message}</div>
+                    `;
+                    document.getElementById('status').innerHTML = statusHtml;
+                    
+                    if (data.usersTableExists) {
+                        log('🎉 Database is ready with all tables!', 'success');
+                        document.getElementById('initBtn').disabled = true;
+                        document.getElementById('initBtn').textContent = '✅ Database Already Initialized';
+                    } else {
+                        log('⚠️ Database connected but tables are missing', 'warning');
+                        document.getElementById('initBtn').disabled = false;
+                    }
+                } else {
+                    document.getElementById('status').innerHTML = `
+                        <div class="error">❌ Database Connection Failed</div>
+                        <div class="error">💬 Error: ${data.message}</div>
+                    `;
+                    log(`❌ Database connection failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error checking status: ${error.message}`, 'error');
+            }
+        }
+        
+        async function initDatabase() {
+            try {
+                log('🚀 Starting database initialization...', 'info');
+                document.getElementById('initBtn').disabled = true;
+                document.getElementById('initBtn').textContent = '⏳ Initializing...';
+                
+                const response = await fetch(`${API_BASE}/init-database`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    log('✅ Database initialized successfully!', 'success');
+                    log('🎉 All tables created and ready to use', 'success');
+                    document.getElementById('initBtn').textContent = '✅ Database Initialized';
+                    
+                    // Check status again
+                    setTimeout(checkStatus, 1000);
+                } else {
+                    log(`❌ Database initialization failed: ${data.message}`, 'error');
+                    if (data.error) {
+                        log(`🔍 Error details: ${data.error}`, 'error');
+                    }
+                    document.getElementById('initBtn').disabled = false;
+                    document.getElementById('initBtn').textContent = '🚀 Initialize Database';
+                }
+            } catch (error) {
+                log(`❌ Error during initialization: ${error.message}`, 'error');
+                document.getElementById('initBtn').disabled = false;
+                document.getElementById('initBtn').textContent = '🚀 Initialize Database';
+            }
+        }
+        
+        // Check status on page load
+        window.onload = function() {
+            log('🌐 HALO Database Setup page loaded', 'info');
+            checkStatus();
+        };
+    </script>
+</body>
+</html>
