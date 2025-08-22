@@ -2,17 +2,24 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthenticationError, AuthorizationError } from './errorHandler';
 
-// Properly extend the Express Request interface
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    username: string;
-    displayName: string;
-    profilePicture?: string;
-    isVerified: boolean;
-    role: string;
-  };
+// Define user type
+interface User {
+  id: string;
+  email: string;
+  username: string;
+  displayName: string;
+  profilePicture?: string;
+  isVerified: boolean;
+  role: string;
+}
+
+// Extend Request with user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
 }
 
 // Safe Redis operations with fallback
@@ -43,7 +50,7 @@ const safeRedisSet = async (key: string, value: string, ttl?: number): Promise<v
 
 // Verify JWT token
 export const authenticateToken = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -94,7 +101,7 @@ export const authenticateToken = async (
 
 // Optional authentication (doesn't throw error if no token)
 export const optionalAuth = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -140,7 +147,7 @@ export const optionalAuth = async (
 
 // Require specific role
 export const requireRole = (roles: string[]) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AuthenticationError('Authentication required');
     }
@@ -160,7 +167,7 @@ export const requireAdmin = requireRole(['admin']);
 export const requireModerator = requireRole(['moderator', 'admin']);
 
 // Require verified user
-export const requireVerified = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const requireVerified = (req: Request, res: Response, next: NextFunction): void => {
   if (!req.user) {
     throw new AuthenticationError('Authentication required');
   }
@@ -174,7 +181,7 @@ export const requireVerified = (req: AuthenticatedRequest, res: Response, next: 
 
 // Check if user owns the resource or is admin
 export const requireOwnership = (resourceUserId: string) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AuthenticationError('Authentication required');
     }
@@ -189,7 +196,7 @@ export const requireOwnership = (resourceUserId: string) => {
 
 // Check if user can access private profile
 export const canAccessProfile = (profileUserId: string, isPrivate: boolean) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       if (isPrivate) {
         throw new AuthenticationError('Authentication required to view private profile');
