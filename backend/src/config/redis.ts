@@ -13,7 +13,8 @@ class RedisClient {
       socket: {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379'),
-        connectTimeout: 5000,
+        connectTimeout: 2000, // 2 second timeout
+        commandTimeout: 1000, // 1 second command timeout
       },
       password: process.env.REDIS_PASSWORD || undefined,
     });
@@ -42,7 +43,13 @@ class RedisClient {
   async connect(): Promise<void> {
     try {
       if (!this.isConnected) {
-        await this.client.connect();
+        // Add timeout to prevent hanging
+        const connectionPromise = this.client.connect();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Redis connection timeout')), 3000);
+        });
+        
+        await Promise.race([connectionPromise, timeoutPromise]);
       }
     } catch (error) {
       console.warn('Redis connection failed (continuing without Redis):', error);

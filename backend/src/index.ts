@@ -89,9 +89,13 @@ async function startServer() {
     await connectDatabase();
     console.log('✅ Database connected successfully');
 
-    // Connect to Redis
-    await connectRedis();
-    console.log('✅ Redis connected successfully');
+    // Try to connect to Redis (but don't block if it fails)
+    try {
+      await connectRedis();
+      console.log('✅ Redis connected successfully');
+    } catch (redisError) {
+      console.log('⚠️ Redis not available, continuing without Redis');
+    }
 
     // Start server
     server.listen(PORT, () => {
