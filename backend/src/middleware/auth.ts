@@ -1,9 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthenticationError, AuthorizationError } from './errorHandler';
-import { getRedisClient } from '../config/redis';
-// import { UserRole } from '../../shared/types';
 
+// Properly extend the Express Request interface
 interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
@@ -16,7 +15,31 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-const redis = getRedisClient();
+// Safe Redis operations with fallback
+const safeRedisGet = async (key: string): Promise<string | null> => {
+  try {
+    const { getRedisClient } = await import('../config/redis');
+    const redis = getRedisClient();
+    return await redis.get(key);
+  } catch (error) {
+    console.warn('Redis not available, skipping blacklist check:', error);
+    return null;
+  }
+};
+
+const safeRedisSet = async (key: string, value: string, ttl?: number): Promise<void> => {
+  try {
+    const { getRedisClient } = await import('../config/redis');
+    const redis = getRedisClient();
+    if (ttl) {
+      await redis.set(key, value, ttl);
+    } else {
+      await redis.set(key, value);
+    }
+  } catch (error) {
+    console.warn('Redis not available, skipping blacklist set:', error);
+  }
+};
 
 // Verify JWT token
 export const authenticateToken = async (
@@ -32,8 +55,8 @@ export const authenticateToken = async (
       throw new AuthenticationError('Access token required');
     }
 
-    // Check if token is blacklisted
-    const isBlacklisted = await redis.get(`blacklist:${token}`);
+    // Check if token is blacklisted (with fallback)
+    const isBlacklisted = await safeRedisGet(`blacklist:${token}`);
     if (isBlacklisted) {
       throw new AuthenticationError('Token has been revoked');
     }
@@ -41,9 +64,9 @@ export const authenticateToken = async (
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     
-    // Check if user still exists and is active
-    const userExists = await redis.get(`user:${decoded.userId}:active`);
-    if (!userExists) {
+    // Check if user still exists and is active (with fallback)
+    const userExists = await safeRedisGet(`user:${decoded.userId}:active`);
+    if (userExists === 'false') {
       throw new AuthenticationError('User account is inactive or deleted');
     }
 
@@ -83,8 +106,8 @@ export const optionalAuth = async (
       return next();
     }
 
-    // Check if token is blacklisted
-    const isBlacklisted = await redis.get(`blacklist:${token}`);
+    // Check if token is blacklisted (with fallback)
+    const isBlacklisted = await safeRedisGet(`blacklist:${token}`);
     if (isBlacklisted) {
       return next();
     }
@@ -92,9 +115,9 @@ export const optionalAuth = async (
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     
-    // Check if user still exists and is active
-    const userExists = await redis.get(`user:${decoded.userId}:active`);
-    if (!userExists) {
+    // Check if user still exists and is active (with fallback)
+    const userExists = await safeRedisGet(`user:${decoded.userId}:active`);
+    if (userExists === 'false') {
       return next();
     }
 
@@ -223,7 +246,7 @@ export const generateRefreshToken = (user: any): string => {
 
 // Blacklist token (for logout)
 export const blacklistToken = async (token: string, expiresIn: number): Promise<void> => {
-  await redis.set(`blacklist:${token}`, 'true', expiresIn);
+  await safeRedisSet(`blacklist:${token}`, 'true', expiresIn);
 };
 
 // Get user from token without verification (for internal use)
