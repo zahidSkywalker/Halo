@@ -8,7 +8,7 @@ const router = Router();
 // Database setup endpoint (POST)
 router.post('/init-database', async (req, res) => {
   try {
-    console.log('🚀 Database initialization requested');
+    console.log('🚀 Database initialization requested via POST');
     
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) {
@@ -30,11 +30,11 @@ router.post('/init-database', async (req, res) => {
     console.log('✅ Connected to database successfully');
 
     // Read the init.sql file
-    const initSqlPath = path.join(__dirname, '..', '..', 'db', 'init.sql');
+    const initSqlPath = path.join(process.cwd(), 'db', 'init.sql');
     console.log('📖 Reading schema from:', initSqlPath);
     
     if (!fs.existsSync(initSqlPath)) {
-      throw new Error('Database schema file not found');
+      throw new Error(`Database schema file not found at: ${initSqlPath}`);
     }
 
     const initSql = fs.readFileSync(initSqlPath, 'utf8');
@@ -88,11 +88,11 @@ router.get('/init-database', async (req, res) => {
     console.log('✅ Connected to database successfully');
 
     // Read the init.sql file
-    const initSqlPath = path.join(__dirname, '..', '..', 'db', 'init.sql');
+    const initSqlPath = path.join(process.cwd(), 'db', 'init.sql');
     console.log('📖 Reading schema from:', initSqlPath);
     
     if (!fs.existsSync(initSqlPath)) {
-      throw new Error('Database schema file not found');
+      throw new Error(`Database schema file not found at: ${initSqlPath}`);
     }
 
     const initSql = fs.readFileSync(initSqlPath, 'utf8');
