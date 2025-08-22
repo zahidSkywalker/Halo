@@ -24,7 +24,14 @@ import {
   Send,
   Image,
   Video,
-  Smile
+  Smile,
+  Users,
+  TrendingUp,
+  Hash,
+  AtSign,
+  Globe,
+  Camera,
+  X
 } from 'lucide-react';
 
 interface Post {
@@ -37,13 +44,41 @@ interface Post {
     profilePicture?: string;
     isVerified: boolean;
   };
+  media?: Array<{
+    id: string;
+    url: string;
+    type: 'image' | 'video';
+    thumbnail?: string;
+  }>;
+  hashtags: string[];
+  mentions: string[];
   likesCount: number;
   commentsCount: number;
   sharesCount: number;
   isLiked: boolean;
   isBookmarked: boolean;
   createdAt: string;
-  hashtags: string[];
+}
+
+interface User {
+  id: string;
+  username: string;
+  displayName: string;
+  profilePicture?: string;
+  isVerified: boolean;
+  isFollowing: boolean;
+  followersCount: number;
+  bio?: string;
+}
+
+interface Notification {
+  id: string;
+  type: 'like' | 'comment' | 'follow' | 'mention';
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  actor?: User;
+  postId?: string;
 }
 
 export default function DashboardPage() {
@@ -52,6 +87,14 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingFeed, setIsLoadingFeed] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<File[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'feed' | 'trending' | 'following'>('feed');
+  
   const router = useRouter();
   const { toast } = useToast();
 
@@ -67,6 +110,8 @@ export default function DashboardPage() {
 
     setUser(JSON.parse(userData));
     fetchFeed();
+    fetchSuggestedUsers();
+    fetchNotifications();
   }, [router]);
 
   const fetchFeed = async () => {
@@ -90,30 +135,72 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchSuggestedUsers = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('/api/users/suggestions', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSuggestedUsers(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching suggested users:', error);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('/api/notifications', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.data || []);
+        setUnreadNotifications(data.data?.filter((n: Notification) => !n.isRead).length || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
   const handleCreatePost = async () => {
-    if (!newPost.trim()) return;
+    if (!newPost.trim() && selectedMedia.length === 0) return;
 
     setIsLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
+      const postData: any = {
+        content: newPost.trim(),
+        hashtags: extractHashtags(newPost),
+        mentions: extractMentions(newPost)
+      };
+
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          content: newPost,
-          hashtags: newPost.match(/#\w+/g) || [],
-        }),
+        body: JSON.stringify(postData),
       });
 
       if (response.ok) {
+        const data = await response.json();
+        setPosts([data.data, ...posts]);
         setNewPost('');
-        fetchFeed();
+        setSelectedMedia([]);
         toast({
           title: 'Success!',
-          description: 'Your post has been created.',
+          description: 'Your post has been created successfully!',
         });
       } else {
         throw new Error('Failed to create post');
@@ -141,135 +228,273 @@ export default function DashboardPage() {
       });
 
       if (response.ok) {
-        fetchFeed();
+        setPosts(posts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              isLiked: !post.isLiked,
+              likesCount: post.isLiked ? post.likesCount - 1 : post.likesCount + 1
+            };
+          }
+          return post;
+        }));
       }
     } catch (error) {
-      console.error('Error liking post:', error);
+      console.error('Error toggling like:', error);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    router.push('/auth/login');
+  const handleFollow = async (userId: string) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`/api/users/${userId}/follow`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setSuggestedUsers(suggestedUsers.map(user => {
+          if (user.id === userId) {
+            return {
+              ...user,
+              isFollowing: !user.isFollowing,
+              followersCount: user.isFollowing ? user.followersCount - 1 : user.followersCount + 1
+            };
+          }
+          return user;
+        }));
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+    }
+  };
+
+  const extractHashtags = (text: string): string[] => {
+    const hashtagRegex = /#[\w\u0590-\u05ff]+/g;
+    return text.match(hashtagRegex)?.map(tag => tag.slice(1)) || [];
+  };
+
+  const extractMentions = (text: string): string[] => {
+    const mentionRegex = /@[\w\u0590-\u05ff]+/g;
+    return text.match(mentionRegex)?.map(mention => mention.slice(1)) || [];
+  };
+
+  const handleMediaSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setSelectedMedia(prev => [...prev, ...files].slice(0, 4)); // Max 4 media files
+  };
+
+  const removeMedia = (index: number) => {
+    setSelectedMedia(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    return date.toLocaleDateString();
   };
 
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Loading..." />
-      </div>
-    );
+    return <LoadingSpinner size="xl" text="Loading your dashboard..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-6xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-white font-bold">H</span>
+              <h1 className="text-2xl font-bold text-gray-900">HALO</h1>
+              <div className="hidden md:flex space-x-1">
+                <Button
+                  variant={activeTab === 'feed' ? 'default' : 'ghost'}
+                  onClick={() => setActiveTab('feed')}
+                  className="flex items-center space-x-2"
+                >
+                  <Home className="w-4 h-4" />
+                  <span>Feed</span>
+                </Button>
+                <Button
+                  variant={activeTab === 'trending' ? 'default' : 'ghost'}
+                  onClick={() => setActiveTab('trending')}
+                  className="flex items-center space-x-2"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Trending</span>
+                </Button>
+                <Button
+                  variant={activeTab === 'following' ? 'default' : 'ghost'}
+                  onClick={() => setActiveTab('following')}
+                  className="flex items-center space-x-2"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Following</span>
+                </Button>
               </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">HALO</h1>
             </div>
-            
+
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Search className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Bell className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="sm">
-                <MessageCircle className="h-5 w-5" />
-              </Button>
-              <Avatar className="w-8 h-8">
-                <AvatarImage src={user?.profilePicture} />
-                <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
-              </Avatar>
+              {/* Search */}
+              <div className="relative hidden md:block">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search HALO..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 w-64"
+                />
+              </div>
+
+              {/* Notifications */}
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadNotifications > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs">
+                      {unreadNotifications}
+                    </Badge>
+                  )}
+                </Button>
+
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border z-50">
+                    <div className="p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h3 className="font-semibold">Notifications</h3>
+                        <Button variant="ghost" size="sm">Mark all read</Button>
+                      </div>
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {notifications.length > 0 ? (
+                          notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`p-3 rounded-lg ${
+                                notification.isRead ? 'bg-gray-50' : 'bg-blue-50'
+                              }`}
+                            >
+                              <p className="text-sm text-gray-700">{notification.message}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatTimeAgo(notification.createdAt)}
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-gray-500 text-center py-4">No notifications yet</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* User Menu */}
+              <div className="flex items-center space-x-3">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={user.profilePicture} />
+                  <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium text-gray-700">{user.displayName}</p>
+                  <p className="text-xs text-gray-500">@{user.username}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-6">
-              <CardContent className="p-4">
-                <nav className="space-y-2">
-                  <Button variant="ghost" className="w-full justify-start" asChild>
-                    <a href="/dashboard">
-                      <Home className="mr-3 h-5 w-5" />
-                      Home
-                    </a>
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start" asChild>
-                    <a href={`/profile/${user?.username}`}>
-                      <User className="mr-3 h-5 w-5" />
-                      Profile
-                    </a>
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start" asChild>
-                    <a href="/bookmarks">
-                      <Bookmark className="mr-3 h-5 w-5" />
-                      Bookmarks
-                    </a>
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start" asChild>
-                    <a href="/settings">
-                      <Settings className="mr-3 h-5 w-5" />
-                      Settings
-                    </a>
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
-                    <Settings className="mr-3 h-5 w-5" />
-                    Logout
-                  </Button>
-                </nav>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Create Post */}
+          {/* Left Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Create Post Card */}
             <Card>
-              <CardContent className="p-4">
+              <CardHeader>
+                <h3 className="text-lg font-semibold">Create Post</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="flex space-x-3">
                   <Avatar className="w-10 h-10">
-                    <AvatarImage src={user?.profilePicture} />
-                    <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                    <AvatarImage src={user.profilePicture} />
+                    <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <Input
-                      placeholder="What's happening?"
+                    <textarea
                       value={newPost}
                       onChange={(e) => setNewPost(e.target.value)}
-                      className="border-0 focus:ring-0 text-lg"
+                      placeholder="What's happening in your world?"
+                      className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={3}
                     />
-                    <div className="flex items-center justify-between mt-3">
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
-                          <Image className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Video className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Smile className="h-4 w-4" />
-                        </Button>
+                    
+                    {/* Media Preview */}
+                    {selectedMedia.length > 0 && (
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {selectedMedia.map((file, index) => (
+                          <div key={index} className="relative">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={`Media ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 bg-red-500 text-white hover:bg-red-600"
+                              onClick={() => removeMedia(index)}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ))}
                       </div>
-                      <Button 
+                    )}
+
+                    {/* Post Actions */}
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex space-x-2">
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*,video/*"
+                            onChange={handleMediaSelect}
+                            className="hidden"
+                          />
+                          <Camera className="w-5 h-5 text-gray-500 hover:text-blue-500" />
+                        </label>
+                        <Smile className="w-5 h-5 text-gray-500 hover:text-blue-500" />
+                        <Hash className="w-5 h-5 text-gray-500 hover:text-blue-500" />
+                        <AtSign className="w-5 h-5 text-gray-500 hover:text-blue-500" />
+                      </div>
+                      <Button
                         onClick={handleCreatePost}
-                        disabled={isLoading || !newPost.trim()}
-                        className="bg-primary hover:bg-primary/90"
+                        disabled={isLoading || (!newPost.trim() && selectedMedia.length === 0)}
+                        className="bg-blue-600 hover:bg-blue-700"
                       >
-                        {isLoading ? <LoadingSpinner size="sm" /> : 'Post'}
+                        {isLoading ? (
+                          <LoadingSpinner size="sm" />
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 mr-2" />
+                            Post
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -277,106 +502,216 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Posts Feed */}
-            <div className="space-y-4">
-              <h2 className="text-2xl font-bold">Your Feed</h2>
-              
-              {isLoadingFeed ? (
-                <div className="flex justify-center py-12">
-                  <LoadingSpinner size="lg" text="Loading your feed..." />
-                </div>
-              ) : posts.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      No posts yet. Be the first to share something!
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                posts.map((post) => (
-                  <Card key={post.id}>
-                    <CardContent className="p-4">
-                      <div className="flex space-x-3">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={post.author.profilePicture} />
-                          <AvatarFallback>{post.author.displayName.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className="font-semibold">{post.author.displayName}</span>
-                            {post.author.isVerified && (
-                              <Badge variant="secondary" className="text-xs">
-                                ✓ Verified
-                              </Badge>
-                            )}
-                            <span className="text-sm text-gray-500">
-                              {new Date(post.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          
-                          <p className="text-gray-900 dark:text-gray-100 mb-3">
-                            {post.content}
-                          </p>
-                          
-                          {post.hashtags.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              {post.hashtags.map((tag, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
+            {/* Who to Follow */}
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold">Who to Follow</h3>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {suggestedUsers.map((suggestedUser) => (
+                  <div key={suggestedUser.id} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={suggestedUser.profilePicture} />
+                        <AvatarFallback>{suggestedUser.displayName?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">{suggestedUser.displayName}</p>
+                        <p className="text-xs text-gray-500">@{suggestedUser.username}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant={suggestedUser.isFollowing ? 'outline' : 'default'}
+                      size="sm"
+                      onClick={() => handleFollow(suggestedUser.id)}
+                    >
+                      {suggestedUser.isFollowing ? 'Following' : 'Follow'}
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Feed */}
+          <div className="lg:col-span-2 space-y-6">
+            {isLoadingFeed ? (
+              <div className="flex justify-center py-12">
+                <LoadingSpinner size="xl" text="Loading your feed..." />
+              </div>
+            ) : posts.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No posts yet</h3>
+                  <p className="text-gray-500 mb-4">
+                    Start following people to see their posts in your feed
+                  </p>
+                  <Button onClick={() => setActiveTab('trending')}>
+                    Explore Trending
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              posts.map((post) => (
+                <Card key={post.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex space-x-3">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={post.author.profilePicture} />
+                        <AvatarFallback>{post.author.displayName?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="font-semibold text-gray-900">
+                            {post.author.displayName}
+                          </span>
+                          {post.author.isVerified && (
+                            <Badge variant="secondary" className="text-xs">
+                              ✓ Verified
+                            </Badge>
                           )}
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleLike(post.id)}
-                                className={post.isLiked ? 'text-red-500' : ''}
-                              >
-                                <Heart className={`h-4 w-4 mr-2 ${post.isLiked ? 'fill-current' : ''}`} />
-                                {post.likesCount}
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                {post.commentsCount}
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Share2 className="h-4 w-4 mr-2" />
-                                {post.sharesCount}
-                              </Button>
-                            </div>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
+                          <span className="text-gray-500 text-sm">
+                            @{post.author.username}
+                          </span>
+                          <span className="text-gray-400 text-sm">
+                            · {formatTimeAgo(post.createdAt)}
+                          </span>
+                        </div>
+
+                        <p className="text-gray-900 mb-3">{post.content}</p>
+
+                        {/* Media Display */}
+                        {post.media && post.media.length > 0 && (
+                          <div className="mb-4">
+                            {post.media.length === 1 ? (
+                              <div className="rounded-lg overflow-hidden">
+                                {post.media[0].type === 'image' ? (
+                                  <img
+                                    src={post.media[0].url}
+                                    alt="Post media"
+                                    className="w-full max-h-96 object-cover"
+                                  />
+                                ) : (
+                                  <video
+                                    src={post.media[0].url}
+                                    controls
+                                    className="w-full max-h-96 object-cover"
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-2 rounded-lg overflow-hidden">
+                                {post.media.slice(0, 4).map((media, index) => (
+                                  <div key={index} className="relative">
+                                    {media.type === 'image' ? (
+                                      <img
+                                        src={media.url}
+                                        alt={`Media ${index + 1}`}
+                                        className="w-full h-32 object-cover"
+                                      />
+                                    ) : (
+                                      <video
+                                        src={media.url}
+                                        className="w-full h-32 object-cover"
+                                      />
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Hashtags and Mentions */}
+                        {(post.hashtags.length > 0 || post.mentions.length > 0) && (
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {post.hashtags.map((tag) => (
+                              <Badge key={tag} variant="outline" className="text-blue-600">
+                                #{tag}
+                              </Badge>
+                            ))}
+                            {post.mentions.map((mention) => (
+                              <Badge key={mention} variant="outline" className="text-green-600">
+                                @{mention}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Post Actions */}
+                        <div className="flex items-center justify-between pt-3 border-t">
+                          <div className="flex items-center space-x-6">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleLike(post.id)}
+                              className={`flex items-center space-x-2 ${
+                                post.isLiked ? 'text-red-500' : 'text-gray-500'
+                              }`}
+                            >
+                              <Heart className={`w-5 h-5 ${post.isLiked ? 'fill-current' : ''}`} />
+                              <span>{post.likesCount}</span>
+                            </Button>
+                            <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                              <MessageSquare className="w-5 h-5 text-gray-500" />
+                              <span>{post.commentsCount}</span>
+                            </Button>
+                            <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                              <Share2 className="w-5 h-5 text-gray-500" />
+                              <span>{post.sharesCount}</span>
                             </Button>
                           </div>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                          </Button>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
 
           {/* Right Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-6">
-              <CardContent className="p-4">
-                <h3 className="font-semibold mb-4">Trending Topics</h3>
-                <div className="space-y-2">
-                  <Badge variant="secondary" className="w-full justify-center">
-                    #Technology
-                  </Badge>
-                  <Badge variant="secondary" className="w-full justify-center">
-                    #Innovation
-                  </Badge>
-                  <Badge variant="secondary" className="w-full justify-center">
-                    #SocialMedia
-                  </Badge>
+          <div className="lg:col-span-1 space-y-6">
+            {/* Trending Topics */}
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold">Trending Topics</h3>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {['#HALO', '#TechNews', '#Innovation', '#Community', '#DigitalAge'].map((topic) => (
+                  <div key={topic} className="flex items-center justify-between">
+                    <span className="text-blue-600 font-medium">{topic}</span>
+                    <span className="text-xs text-gray-500">1.2K posts</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold">Your Stats</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Posts</span>
+                  <span className="font-semibold">12</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Followers</span>
+                  <span className="font-semibold">156</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Following</span>
+                  <span className="font-semibold">89</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Likes</span>
+                  <span className="font-semibold">1.2K</span>
                 </div>
               </CardContent>
             </Card>

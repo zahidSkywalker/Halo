@@ -11,11 +11,29 @@ const router = Router();
 const createPostSchema = Joi.object({
   content: Joi.string().min(1).max(1000).required(),
   hashtags: Joi.array().items(Joi.string()).optional(),
-  mentions: Joi.array().items(Joi.string()).optional()
+  mentions: Joi.array().items(Joi.string()).optional(),
+  media: Joi.array().items(Joi.object({
+    type: Joi.string().valid('image', 'video').required(),
+    url: Joi.string().uri().required(),
+    thumbnail: Joi.string().uri().optional()
+  })).optional()
 });
 
 const updatePostSchema = Joi.object({
   content: Joi.string().min(1).max(1000).required()
+});
+
+const commentSchema = Joi.object({
+  content: Joi.string().min(1).max(500).required()
+});
+
+const likeSchema = Joi.object({
+  postId: Joi.string().uuid().required()
+});
+
+const shareSchema = Joi.object({
+  postId: Joi.string().uuid().required(),
+  content: Joi.string().max(500).optional()
 });
 
 /**
@@ -282,7 +300,7 @@ router.delete('/:postId', authenticateToken, asyncHandler(async (req, res) => {
  * @swagger
  * /api/posts/{postId}/like:
  *   post:
- *     summary: Like a post
+ *     summary: Like or unlike a post
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -295,9 +313,7 @@ router.delete('/:postId', authenticateToken, asyncHandler(async (req, res) => {
  *           format: uuid
  *     responses:
  *       200:
- *         description: Post liked successfully
- *       400:
- *         description: Post already liked
+ *         description: Post liked/unliked successfully
  *       401:
  *         description: Unauthorized
  *       404:
@@ -306,11 +322,11 @@ router.delete('/:postId', authenticateToken, asyncHandler(async (req, res) => {
 router.post('/:postId/like', authenticateToken, asyncHandler(async (req, res) => {
   const { postId } = req.params;
 
-  await PostService.likePost(postId, req.user!.id);
+  const result = await PostService.toggleLike(req.user!.id, postId);
   
   res.json({
     success: true,
-    message: 'Post liked successfully'
+    data: result
   });
 }));
 
@@ -521,6 +537,203 @@ router.get('/search', asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: posts
+  });
+}));
+
+/**
+ * @swagger
+ * /api/posts/{postId}/comments:
+ *   post:
+ *     summary: Add a comment to a post
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 500
+ *     responses:
+ *       201:
+ *         description: Comment added successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Post not found
+ */
+router.post('/:postId/comments', authenticateToken, asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { error, value } = commentSchema.validate(req.body);
+  
+  if (error) {
+    throw new ValidationError(error.details[0].message);
+  }
+
+  const comment = await PostService.addComment(req.user!.id, postId, value.content);
+  
+  res.status(201).json({
+    success: true,
+    data: comment
+  });
+}));
+
+/**
+ * @swagger
+ * /api/posts/{postId}/comments:
+ *   get:
+ *     summary: Get comments for a post
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Post comments
+ *       404:
+ *         description: Post not found
+ */
+router.get('/:postId/comments', asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { limit = 20, offset = 0 } = req.query;
+
+  const comments = await PostService.getComments(
+    postId,
+    parseInt(limit as string),
+    parseInt(offset as string)
+  );
+  
+  res.json({
+    success: true,
+    data: comments
+  });
+}));
+
+/**
+ * @swagger
+ * /api/posts/{postId}/share:
+ *   post:
+ *     summary: Share a post
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 maxLength: 500
+ *     responses:
+ *       201:
+ *         description: Post shared successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Post not found
+ */
+router.post('/:postId/share', authenticateToken, asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { error, value } = shareSchema.validate(req.body);
+  
+  if (error) {
+    throw new ValidationError(error.details[0].message);
+  }
+
+  const sharedPost = await PostService.sharePost(req.user!.id, postId, value.content);
+  
+  res.status(201).json({
+    success: true,
+    data: sharedPost
+  });
+}));
+
+/**
+ * @swagger
+ * /api/posts/{postId}/media:
+ *   post:
+ *     summary: Upload media for a post
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               media:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Media uploaded successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Post not found
+ */
+router.post('/:postId/media', authenticateToken, asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  
+  // Note: This is a placeholder. In production, you'd use multer or similar
+  // to handle file uploads and integrate with cloud storage (AWS S3, etc.)
+  
+  res.json({
+    success: true,
+    message: 'Media upload endpoint - implement with file upload middleware'
   });
 }));
 

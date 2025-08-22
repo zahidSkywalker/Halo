@@ -406,6 +406,134 @@ router.delete('/unfollow/:userId', authenticateToken, asyncHandler(async (req, r
 
 /**
  * @swagger
+ * /api/users/{userId}/follow:
+ *   post:
+ *     summary: Follow or unfollow a user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: User followed/unfollowed successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ */
+router.post('/:userId/follow', authenticateToken, asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  
+  if (userId === req.user!.id) {
+    throw new ValidationError('Cannot follow yourself');
+  }
+
+  const result = await UserService.toggleFollow(req.user!.id, userId);
+  
+  res.json({
+    success: true,
+    data: result
+  });
+}));
+
+/**
+ * @swagger
+ * /api/users/{userId}/followers:
+ *   get:
+ *     summary: Get user's followers
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: User's followers
+ *       404:
+ *         description: User not found
+ */
+router.get('/:userId/followers', asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { limit = 20, offset = 0 } = req.query;
+
+  const followers = await UserService.getFollowers(
+    userId,
+    parseInt(limit as string),
+    parseInt(offset as string)
+  );
+  
+  res.json({
+    success: true,
+    data: followers
+  });
+}));
+
+/**
+ * @swagger
+ * /api/users/{userId}/following:
+ *   get:
+ *     summary: Get users that this user follows
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Users being followed
+ *       404:
+ *         description: User not found
+ */
+router.get('/:userId/following', asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { limit = 20, offset = 0 } = req.query;
+
+  const following = await UserService.getFollowing(
+    userId,
+    parseInt(limit as string),
+    parseInt(offset as string)
+  );
+  
+  res.json({
+    success: true,
+    data: following
+  });
+}));
+
+/**
+ * @swagger
  * /api/users/search:
  *   get:
  *     summary: Search users
@@ -430,17 +558,6 @@ router.delete('/unfollow/:userId', authenticateToken, asyncHandler(async (req, r
  *     responses:
  *       200:
  *         description: Search results
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/User'
  *       400:
  *         description: Search query required
  */
@@ -456,6 +573,37 @@ router.get('/search', asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: users
+  });
+}));
+
+/**
+ * @swagger
+ * /api/users/suggestions:
+ *   get:
+ *     summary: Get user suggestions (who to follow)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: User suggestions
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/suggestions', authenticateToken, asyncHandler(async (req, res) => {
+  const { limit = 10 } = req.query;
+
+  const suggestions = await UserService.getUserSuggestions(req.user!.id, parseInt(limit as string));
+  
+  res.json({
+    success: true,
+    data: suggestions
   });
 }));
 

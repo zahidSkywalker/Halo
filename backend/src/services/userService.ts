@@ -193,33 +193,7 @@ export class UserService {
     }
   }
 
-  // Get followers
-  static async getFollowers(userId: string, limit: number = 20, offset: number = 0): Promise<User[]> {
-    const result = await database.query(
-      `SELECT u.* FROM users u
-       INNER JOIN follows f ON f.follower_id = u.id
-       WHERE f.followed_id = $1 AND u.is_active = true
-       ORDER BY f.created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [userId, limit, offset]
-    );
 
-    return result.rows.map(user => this.mapUserFromDB(user));
-  }
-
-  // Get following
-  static async getFollowing(userId: string, limit: number = 20, offset: number = 0): Promise<User[]> {
-    const result = await database.query(
-      `SELECT u.* FROM users u
-       INNER JOIN follows f ON f.followed_id = u.id
-       WHERE f.follower_id = $1 AND u.is_active = true
-       ORDER BY f.created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [userId, limit, offset]
-    );
-
-    return result.rows.map(user => this.mapUserFromDB(user));
-  }
 
   // Search users
   static async searchUsers(query: string, limit: number = 20, offset: number = 0): Promise<User[]> {
@@ -338,5 +312,130 @@ export class UserService {
   // Helper method to convert camelCase to snake_case
   private static camelToSnake(str: string): string {
     return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+  }
+
+  /**
+   * Toggle follow/unfollow a user
+   */
+  static async toggleFollow(followerId: string, followedId: string): Promise<{ isFollowing: boolean; followersCount: number }> {
+    try {
+      // Check if already following
+      const existingFollow = await database.query(
+        'SELECT id FROM user_follows WHERE follower_id = $1 AND followed_id = $2',
+        [followerId, followedId]
+      );
+
+      if (existingFollow.rows.length > 0) {
+        // Unfollow
+        await database.query(
+          'DELETE FROM user_follows WHERE follower_id = $1 AND followed_id = $2',
+          [followerId, followedId]
+        );
+
+        // Update counts
+        await database.query(
+          'UPDATE users SET followers_count = followers_count - 1 WHERE id = $1',
+          [followedId]
+        );
+        await database.query(
+          'UPDATE users SET following_count = following_count - 1 WHERE id = $1',
+          [followerId]
+        );
+
+        return { isFollowing: false, followersCount: Math.max(0, (await this.getUserById(followedId)).followersCount - 1) };
+      } else {
+        // Follow
+        await database.query(
+          'INSERT INTO user_follows (follower_id, followed_id) VALUES ($1, $2)',
+          [followerId, followedId]
+        );
+
+        // Update counts
+        await database.query(
+          'UPDATE users SET followers_count = followers_count + 1 WHERE id = $1',
+          [followedId]
+        );
+        await database.query(
+          'UPDATE users SET following_count = following_count + 1 WHERE id = $1',
+          [followerId]
+        );
+
+        return { isFollowing: true, followersCount: (await this.getUserById(followedId)).followersCount + 1 };
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      throw new Error('Failed to toggle follow');
+    }
+  }
+
+  /**
+   * Get user's followers
+   */
+  static async getFollowers(userId: string, limit: number = 20, offset: number = 0): Promise<User[]> {
+    try {
+      const result = await database.query(
+        `SELECT u.* FROM users u
+         INNER JOIN user_follows uf ON uf.follower_id = u.id
+         WHERE uf.followed_id = $1 AND u.is_active = true
+         ORDER BY uf.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [userId, limit, offset]
+      );
+
+      return result.rows.map(row => this.mapUserFromDB(row));
+    } catch (error) {
+      console.error('Error getting followers:', error);
+      throw new Error('Failed to get followers');
+    }
+  }
+
+  /**
+   * Get users that this user follows
+   */
+  static async getFollowing(userId: string, limit: number = 20, offset: number = 0): Promise<User[]> {
+    try {
+      const result = await database.query(
+        `SELECT u.* FROM users u
+         INNER JOIN user_follows uf ON uf.followed_id = u.id
+         WHERE uf.follower_id = $1 AND u.is_active = true
+         ORDER BY uf.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [userId, limit, offset]
+      );
+
+      return result.rows.map(row => this.mapUserFromDB(row));
+    } catch (error) {
+      console.error('Error getting following:', error);
+      throw new Error('Failed to get following');
+    }
+  }
+
+  /**
+   * Get user suggestions (who to follow)
+   */
+  static async getUserSuggestions(userId: string, limit: number = 10): Promise<User[]> {
+    try {
+      // Get users that the current user doesn't follow
+      const result = await database.query(
+        `SELECT u.*, 
+                (SELECT COUNT(*) FROM user_follows WHERE followed_id = u.id) as followers_count,
+                (SELECT COUNT(*) FROM user_follows WHERE follower_id = u.id) as following_count,
+                (SELECT COUNT(*) FROM posts WHERE author_id = u.id) as posts_count
+         FROM users u
+         WHERE u.id != $1 
+         AND u.is_active = true
+         AND u.id NOT IN (
+           SELECT followed_id FROM user_follows WHERE follower_id = $1
+         )
+         ORDER BY followers_count DESC, posts_count DESC
+         LIMIT $2`,
+        [userId, limit]
+      );
+
+      return result.rows.map(row => this.mapUserFromDB(row));
+    } catch (error) {
+      console.error('Error getting user suggestions:', error);
+      throw new Error('Failed to get user suggestions');
+    }
   }
 }

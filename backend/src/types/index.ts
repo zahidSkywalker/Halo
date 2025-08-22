@@ -111,19 +111,6 @@ export interface Comment {
 }
 
 // Notification Types
-export interface Notification {
-  id: string;
-  type: NotificationType;
-  userId: string;
-  actorId?: string;
-  actor?: User;
-  postId?: string;
-  commentId?: string;
-  messageId?: string;
-  isRead: boolean;
-  createdAt: Date;
-}
-
 export enum NotificationType {
   LIKE = 'like',
   COMMENT = 'comment',
@@ -131,6 +118,31 @@ export enum NotificationType {
   FOLLOW = 'follow',
   MENTION = 'mention',
   MESSAGE = 'message'
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  actorId?: string;
+  postId?: string;
+  commentId?: string;
+  message?: string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationSettings {
+  userId: string;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  likeNotifications: boolean;
+  commentNotifications: boolean;
+  followNotifications: boolean;
+  mentionNotifications: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Message Types

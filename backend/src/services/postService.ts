@@ -465,4 +465,123 @@ export class PostService {
       updatedAt: dbPost.updated_at
     };
   }
+
+  /**
+   * Toggle like on a post
+   */
+  static async toggleLike(userId: string, postId: string): Promise<{ isLiked: boolean; likesCount: number }> {
+    try {
+      // Check if user already liked the post
+      const existingLike = await database.query(
+        'SELECT id FROM post_likes WHERE user_id = $1 AND post_id = $2',
+        [userId, postId]
+      );
+
+      if (existingLike.rows.length > 0) {
+        // Unlike the post
+        await database.query(
+          'DELETE FROM post_likes WHERE user_id = $1 AND post_id = $2',
+          [userId, postId]
+        );
+
+        // Update likes count
+        await database.query(
+          'UPDATE posts SET likes_count = likes_count - 1 WHERE id = $1',
+          [postId]
+        );
+
+        return { isLiked: false, likesCount: Math.max(0, (await this.getPostById(postId)).likesCount - 1) };
+      } else {
+        // Like the post
+        await database.query(
+          'INSERT INTO post_likes (user_id, post_id) VALUES ($1, $2)',
+          [userId, postId]
+        );
+
+        // Update likes count
+        await database.query(
+          'UPDATE posts SET likes_count = likes_count + 1 WHERE id = $1',
+          [postId]
+        );
+
+        return { isLiked: true, likesCount: (await this.getPostById(postId)).likesCount + 1 };
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      throw new Error('Failed to toggle like');
+    }
+  }
+
+  /**
+   * Add a comment to a post
+   */
+  static async addComment(userId: string, postId: string, content: string): Promise<any> {
+    try {
+      const result = await database.query(
+        'INSERT INTO comments (user_id, post_id, content) VALUES ($1, $2, $3) RETURNING *',
+        [userId, postId, content]
+      );
+
+      // Update comments count
+      await database.query(
+        'UPDATE posts SET comments_count = comments_count + 1 WHERE id = $1',
+        [postId]
+      );
+
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      throw new Error('Failed to add comment');
+    }
+  }
+
+  /**
+   * Get comments for a post
+   */
+  static async getComments(postId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+    try {
+      const result = await database.query(
+        `SELECT c.*, u.username, u.display_name, u.profile_picture, u.is_verified
+         FROM comments c
+         INNER JOIN users u ON c.user_id = u.id
+         WHERE c.post_id = $1
+         ORDER BY c.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [postId, limit, offset]
+      );
+
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting comments:', error);
+      throw new Error('Failed to get comments');
+    }
+  }
+
+  /**
+   * Share a post
+   */
+  static async sharePost(userId: string, postId: string, content?: string): Promise<Post> {
+    try {
+      // Get the original post
+      const originalPost = await this.getPostById(postId);
+      
+      // Create a new post that references the original
+      const sharedPost = await this.createPost(userId, {
+        content: content || `Shared: ${originalPost.content}`,
+        hashtags: originalPost.hashtags,
+        mentions: originalPost.mentions
+      });
+
+      // Update shares count on original post
+      await database.query(
+        'UPDATE posts SET shares_count = shares_count + 1 WHERE id = $1',
+        [postId]
+      );
+
+      return sharedPost;
+    } catch (error) {
+      console.error('Error sharing post:', error);
+      throw new Error('Failed to share post');
+    }
+  }
 }
