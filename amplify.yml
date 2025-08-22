@@ -3,27 +3,17 @@ frontend:
   phases:
     preBuild:
       commands:
-        - echo "Starting frontend build..."
-        - echo "Current directory:"
-        - pwd
-        - echo "Listing files:"
-        - ls -la
-        - echo "Changing to frontend directory..."
-        - cd frontend
-        - echo "Frontend directory contents:"
-        - ls -la
-        - echo "Installing frontend dependencies..."
-        - npm install
+        - echo "Installing dependencies..."
+        - npm ci
     build:
       commands:
-        - echo "Building frontend..."
+        - echo "Building the application..."
         - npm run build
-        - echo "Frontend build completed!"
   artifacts:
-    baseDirectory: frontend/.next
+    baseDirectory: .next
     files:
       - '**/*'
   cache:
     paths:
-      - frontend/node_modules/**/*
-      - frontend/.next/cache/**/*
+      - node_modules/**/*
+      - .next/cache/**/*
