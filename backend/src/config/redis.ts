@@ -6,40 +6,53 @@ dotenv.config();
 class RedisClient {
   private client: RedisClientType;
   private isConnected: boolean = false;
+  private isEnabled: boolean = false;
 
   constructor() {
-    this.client = createClient({
-      url: process.env.REDIS_URL || 'redis://localhost:6379',
-      socket: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        connectTimeout: 2000, // 2 second timeout
-      },
-      password: process.env.REDIS_PASSWORD || undefined,
-    });
+    // Only create Redis client if REDIS_URL is explicitly set and not localhost
+    if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379') {
+      this.isEnabled = true;
+      this.client = createClient({
+        url: process.env.REDIS_URL,
+        socket: {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+          connectTimeout: 2000, // 2 second timeout
+        },
+        password: process.env.REDIS_PASSWORD || undefined,
+      });
 
-    this.client.on('error', (err) => {
-      console.warn('Redis Client Error (non-critical):', err);
-      this.isConnected = false;
-    });
+      this.client.on('error', (err) => {
+        console.warn('Redis Client Error (non-critical):', err);
+        this.isConnected = false;
+      });
 
-    this.client.on('connect', () => {
-      console.log('Redis Client Connected');
-      this.isConnected = true;
-    });
+      this.client.on('connect', () => {
+        console.log('Redis Client Connected');
+        this.isConnected = true;
+      });
 
-    this.client.on('ready', () => {
-      console.log('Redis Client Ready');
-      this.isConnected = true;
-    });
+      this.client.on('ready', () => {
+        console.log('Redis Client Ready');
+        this.isConnected = true;
+      });
 
-    this.client.on('end', () => {
-      console.log('Redis Client Disconnected');
-      this.isConnected = false;
-    });
+      this.client.on('end', () => {
+        console.log('Redis Client Disconnected');
+        this.isConnected = false;
+      });
+    } else {
+      this.isEnabled = false;
+      console.log('ℹ️ Redis disabled - no valid REDIS_URL configured');
+    }
   }
 
   async connect(): Promise<void> {
+    if (!this.isEnabled) {
+      console.log('ℹ️ Redis not enabled, skipping connection');
+      return;
+    }
+
     try {
       if (!this.isConnected) {
         // Add timeout to prevent hanging
@@ -57,23 +70,24 @@ class RedisClient {
   }
 
   async disconnect(): Promise<void> {
+    if (!this.isEnabled || !this.isConnected) {
+      return;
+    }
+
     try {
-      if (this.isConnected) {
-        await this.client.disconnect();
-        this.isConnected = false;
-      }
+      await this.client.disconnect();
+      this.isConnected = false;
     } catch (error) {
       console.warn('Redis disconnection error:', error);
     }
   }
 
   async set(key: string, value: string, ttl?: number): Promise<void> {
+    if (!this.isEnabled || !this.isConnected) {
+      return;
+    }
+
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping SET operation');
-        return;
-      }
-      
       if (ttl) {
         await this.client.setEx(key, ttl, value);
       } else {
@@ -85,12 +99,11 @@ class RedisClient {
   }
 
   async get(key: string): Promise<string | null> {
+    if (!this.isEnabled || !this.isConnected) {
+      return null;
+    }
+
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping GET operation');
-        return null;
-      }
-      
       return await this.client.get(key);
     } catch (error) {
       console.warn('Redis GET error (non-critical):', error);
@@ -99,12 +112,11 @@ class RedisClient {
   }
 
   async del(key: string): Promise<number> {
+    if (!this.isEnabled || !this.isConnected) {
+      return 0;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping DEL operation');
-        return 0;
-      }
-      
       return await this.client.del(key);
     } catch (error) {
       console.warn('Redis DEL error (non-critical):', error);
@@ -113,12 +125,11 @@ class RedisClient {
   }
 
   async exists(key: string): Promise<number> {
+    if (!this.isEnabled || !this.isConnected) {
+      return 0;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping EXISTS operation');
-        return 0;
-      }
-      
       return await this.client.exists(key);
     } catch (error) {
       console.warn('Redis EXISTS error (non-critical):', error);
@@ -127,12 +138,11 @@ class RedisClient {
   }
 
   async expire(key: string, ttl: number): Promise<boolean> {
+    if (!this.isEnabled || !this.isConnected) {
+      return false;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping EXPIRE operation');
-        return false;
-      }
-      
       return await this.client.expire(key, ttl);
     } catch (error) {
       console.warn('Redis EXPIRE error (non-critical):', error);
@@ -141,12 +151,11 @@ class RedisClient {
   }
 
   async hSet(key: string, field: string, value: string): Promise<number> {
+    if (!this.isEnabled || !this.isConnected) {
+      return 0;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping HSET operation');
-        return 0;
-      }
-      
       return await this.client.hSet(key, field, value);
     } catch (error) {
       console.warn('Redis HSET error (non-critical):', error);
@@ -155,12 +164,11 @@ class RedisClient {
   }
 
   async hGet(key: string, field: string): Promise<string | null> {
+    if (!this.isEnabled || !this.isConnected) {
+      return null;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping HGET operation');
-        return null;
-      }
-      
       return await this.client.hGet(key, field);
     } catch (error) {
       console.warn('Redis HGET error (non-critical):', error);
@@ -169,12 +177,11 @@ class RedisClient {
   }
 
   async hGetAll(key: string): Promise<Record<string, string>> {
+    if (!this.isEnabled || !this.isConnected) {
+      return {};
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping HGETALL operation');
-        return {};
-      }
-      
       return await this.client.hGetAll(key);
     } catch (error) {
       console.warn('Redis HGETALL error (non-critical):', error);
@@ -183,12 +190,11 @@ class RedisClient {
   }
 
   async hDel(key: string, field: string): Promise<number> {
+    if (!this.isEnabled || !this.isConnected) {
+      return 0;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping HDEL operation');
-        return 0;
-      }
-      
       return await this.client.hDel(key, field);
     } catch (error) {
       console.warn('Redis HDEL error (non-critical):', error);
@@ -197,12 +203,11 @@ class RedisClient {
   }
 
   async lPush(key: string, value: string): Promise<number> {
+    if (!this.isEnabled || !this.isConnected) {
+      return 0;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping LPUSH operation');
-        return 0;
-      }
-      
       return await this.client.lPush(key, value);
     } catch (error) {
       console.warn('Redis LPUSH error (non-critical):', error);
@@ -211,12 +216,11 @@ class RedisClient {
   }
 
   async rPop(key: string): Promise<string | null> {
+    if (!this.isEnabled || !this.isConnected) {
+      return null;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping RPOP operation');
-        return null;
-      }
-      
       return await this.client.rPop(key);
     } catch (error) {
       console.warn('Redis RPOP error (non-critical):', error);
@@ -225,12 +229,11 @@ class RedisClient {
   }
 
   async lRange(key: string, start: number, stop: number): Promise<string[]> {
+    if (!this.isEnabled || !this.isConnected) {
+      return [];
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping LRANGE operation');
-        return [];
-      }
-      
       return await this.client.lRange(key, start, stop);
     } catch (error) {
       console.warn('Redis LRANGE error (non-critical):', error);
@@ -239,12 +242,11 @@ class RedisClient {
   }
 
   async sAdd(key: string, member: string): Promise<number> {
+    if (!this.isEnabled || !this.isConnected) {
+      return 0;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping SADD operation');
-        return 0;
-      }
-      
       return await this.client.sAdd(key, member);
     } catch (error) {
       console.warn('Redis SADD error (non-critical):', error);
@@ -253,12 +255,11 @@ class RedisClient {
   }
 
   async sRem(key: string, member: string): Promise<number> {
+    if (!this.isEnabled || !this.isConnected) {
+      return 0;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping SREM operation');
-        return 0;
-      }
-      
       return await this.client.sRem(key, member);
     } catch (error) {
       console.warn('Redis SREM error (non-critical):', error);
@@ -267,12 +268,11 @@ class RedisClient {
   }
 
   async sMembers(key: string): Promise<string[]> {
+    if (!this.isEnabled || !this.isConnected) {
+      return [];
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping SMEMBERS operation');
-        return [];
-      }
-      
       return await this.client.sMembers(key);
     } catch (error) {
       console.warn('Redis SMEMBERS error (non-critical):', error);
@@ -281,12 +281,11 @@ class RedisClient {
   }
 
   async sIsMember(key: string, member: string): Promise<boolean> {
+    if (!this.isEnabled || !this.isConnected) {
+      return false;
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping SISMEMBER operation');
-        return false;
-      }
-      
       return await this.client.sIsMember(key, member);
     } catch (error) {
       console.warn('Redis SISMEMBER error (non-critical):', error);
@@ -295,12 +294,11 @@ class RedisClient {
   }
 
   async ping(): Promise<string> {
+    if (!this.isEnabled || !this.isConnected) {
+      return 'PONG';
+    }
+    
     try {
-      if (!this.isConnected) {
-        console.warn('Redis not connected, skipping PING operation');
-        return 'PONG';
-      }
-      
       return await this.client.ping();
     } catch (error) {
       console.warn('Redis PING error (non-critical):', error);

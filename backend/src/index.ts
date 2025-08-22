@@ -89,12 +89,16 @@ async function startServer() {
     await connectDatabase();
     console.log('✅ Database connected successfully');
 
-    // Try to connect to Redis (but don't block if it fails)
-    try {
-      await connectRedis();
-      console.log('✅ Redis connected successfully');
-    } catch (redisError) {
-      console.log('⚠️ Redis not available, continuing without Redis');
+    // Only try Redis if REDIS_URL is explicitly set
+    if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379') {
+      try {
+        await connectRedis();
+        console.log('✅ Redis connected successfully');
+      } catch (redisError) {
+        console.log('⚠️ Redis connection failed, continuing without Redis');
+      }
+    } else {
+      console.log('ℹ️ Redis not configured, skipping Redis connection');
     }
 
     // Start server
