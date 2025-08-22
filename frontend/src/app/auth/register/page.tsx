@@ -12,6 +12,7 @@ import { AnimatedLogo } from '@/components/ui/morphing-logo';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { AuthJigglyHalo } from '@/components/ui/jiggly-halo';
 import { Eye, EyeOff, User, Mail, Lock, Phone } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -26,6 +27,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { register } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -73,44 +75,25 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          username: formData.username,
-          displayName: formData.displayName,
-          password: formData.password,
-        }),
+      // Use the auth context register function
+      await register({
+        email: formData.email,
+        username: formData.username,
+        displayName: formData.displayName,
+        password: formData.password,
       });
 
-      const data = await response.json();
+      toast({
+        title: 'Welcome to HALO!',
+        description: 'Your account has been created successfully.',
+      });
 
-      if (response.ok) {
-        // Store tokens in localStorage (in production, use httpOnly cookies)
-        localStorage.setItem('accessToken', data.data.accessToken);
-        localStorage.setItem('refreshToken', data.data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-
-        toast({
-          title: 'Welcome to HALO!',
-          description: 'Your account has been created successfully.',
-        });
-
-        router.push('/dashboard');
-      } else {
-        toast({
-          title: 'Registration failed',
-          description: data.message || 'Something went wrong. Please try again.',
-          variant: 'destructive',
-        });
-      }
+      // Redirect to dashboard
+      router.push('/dashboard');
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
+        title: 'Registration failed',
+        description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
         variant: 'destructive',
       });
     } finally {
