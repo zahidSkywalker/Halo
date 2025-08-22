@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { getDatabase } from '../config/database';
-import { User, UserProfile, UserRole } from '../../../shared/types';
+import { User, UserProfile, UserRole } from '../types';
 import { ValidationError, NotFoundError, ConflictError } from '../middleware/errorHandler';
 
 const database = getDatabase();

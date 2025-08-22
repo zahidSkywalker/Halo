@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getDatabase } from '../config/database';
-import { UserService } from './userService';
-import { User, LoginCredentials, RegisterData } from '../../../shared/types';
-import { ValidationError, AuthenticationError } from '../middleware/errorHandler';
+import { User, LoginCredentials, RegisterData } from '../types';
+import { ValidationError, NotFoundError, AuthenticationError } from '../middleware/errorHandler';
 import { generateAccessToken, generateRefreshToken, blacklistToken } from '../middleware/auth';
+import { UserService } from './userService';
 
 const database = getDatabase();
 

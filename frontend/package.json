@@ -38,7 +38,9 @@
     "@radix-ui/react-label": "^2.0.2",
     "tailwind-merge": "^2.0.0",
     "react-query": "^3.39.3",
-    "next-themes": "^0.2.1"
+    "next-themes": "^0.2.1",
+    "class-variance-authority": "^0.7.0",
+    "socket.io-client": "^4.7.4"
   },
   "devDependencies": {
     "eslint": "^8.52.0",

@@ -1,5 +1,5 @@
 import { getDatabase } from '../config/database';
-import { Post, CreatePostData, FeedPost, Media, MediaType } from '../../../shared/types';
+import { Post, CreatePostData, FeedPost, Media, MediaType } from '../types';
 import { ValidationError, NotFoundError, AuthorizationError, ConflictError } from '../middleware/errorHandler';
 import { UserService } from './userService';
 
