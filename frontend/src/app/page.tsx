@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { AnimatedLogo } from '@/components/ui/morphing-logo';
-import { AuthJigglyHalo } from '@/components/ui/jiggly-halo';
+import { MorphingLogo } from '@/components/ui/morphing-logo';
 import { 
   Heart, 
   MessageCircle, 
@@ -260,9 +260,9 @@ export default function HomePage() {
             {/* Company Info */}
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center space-x-3 mb-4">
-                {/* Animated HALO Logo */}
+                {/* Morphing HALO Logo (same as header) */}
                 <div className="w-10 h-10 bg-gradient-to-r from-primary to-purple-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-105 transition-transform duration-300">
-                  <AuthJigglyHalo size="sm" />
+                  <MorphingLogo size="sm" />
                 </div>
                 <span className="text-2xl font-bold gradient-text">HALO</span>
               </div>
