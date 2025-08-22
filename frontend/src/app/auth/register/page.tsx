@@ -8,7 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { AnimatedLogo } from '@/components/ui/morphing-logo';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { AuthJigglyHalo } from '@/components/ui/jiggly-halo';
+import { Eye, EyeOff, User, Mail, Lock, Phone } from 'lucide-react';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -120,8 +123,8 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center">
-            <div className="mx-auto w-12 h-12 bg-halo-500 rounded-full flex items-center justify-center mb-4">
-              <span className="text-white font-bold text-xl">H</span>
+            <div className="mx-auto mb-4">
+              <AuthJigglyHalo size="md" />
             </div>
             <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
             <CardDescription>
@@ -231,7 +234,7 @@ export default function RegisterPage() {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <LoadingSpinner className="mr-2 h-4 w-4" />
                     Creating account...
                   </>
                 ) : (
