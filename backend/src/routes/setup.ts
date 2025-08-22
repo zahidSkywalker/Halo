@@ -5,10 +5,68 @@ import path from 'path';
 
 const router = Router();
 
-// Database setup endpoint
+// Database setup endpoint (POST)
 router.post('/init-database', async (req, res) => {
   try {
     console.log('🚀 Database initialization requested');
+    
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      return res.status(500).json({
+        success: false,
+        message: 'DATABASE_URL not configured'
+      });
+    }
+
+    console.log('🔗 Connecting to database...');
+    const client = new Client({
+      connectionString: databaseUrl,
+      ssl: {
+        rejectUnauthorized: false
+      }
+    });
+
+    await client.connect();
+    console.log('✅ Connected to database successfully');
+
+    // Read the init.sql file
+    const initSqlPath = path.join(__dirname, '..', '..', 'db', 'init.sql');
+    console.log('📖 Reading schema from:', initSqlPath);
+    
+    if (!fs.existsSync(initSqlPath)) {
+      throw new Error('Database schema file not found');
+    }
+
+    const initSql = fs.readFileSync(initSqlPath, 'utf8');
+    console.log('📄 Schema file loaded, executing...');
+
+    // Execute the SQL
+    await client.query(initSql);
+    
+    console.log('✅ Database initialized successfully!');
+    
+    await client.end();
+    
+    res.json({
+      success: true,
+      message: 'Database initialized successfully! All tables created and ready to use.',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Database initialization error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Database initialization failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Database setup endpoint (GET - alternative method)
+router.get('/init-database', async (req, res) => {
+  try {
+    console.log('🚀 Database initialization requested via GET');
     
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) {
