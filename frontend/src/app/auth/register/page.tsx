@@ -93,15 +93,15 @@ export default function RegisterPage() {
         description: 'Your account has been created successfully.',
       });
 
-      // Redirect to dashboard
-      console.log('📍 Router push to /dashboard');
-      router.push('/dashboard');
+      // Redirect to test dashboard first
+      console.log('📍 Router push to /dashboard/test');
+      router.push('/dashboard/test');
       console.log('✅ Router push completed');
       
       // Fallback redirect if router doesn't work
       setTimeout(() => {
         console.log('🔄 Fallback redirect using window.location');
-        window.location.href = '/dashboard';
+        window.location.href = '/dashboard/test';
       }, 1000);
     } catch (error) {
       console.error('❌ Registration error:', error);
