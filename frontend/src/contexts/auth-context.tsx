@@ -82,24 +82,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const register = async (userData: any) => {
+    console.log('🔐 Auth context: Starting registration...', userData);
     try {
+      console.log('🌐 Auth context: Making API call to /api/auth/register');
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
 
+      console.log('📡 Auth context: API response status:', response.status);
+      const data = await response.json();
+      console.log('📄 Auth context: API response data:', data);
+
       if (response.ok) {
-        const data = await response.json();
+        console.log('✅ Auth context: Registration successful, setting user data');
         setUser(data.data.user);
         localStorage.setItem('user', JSON.stringify(data.data.user));
         localStorage.setItem('accessToken', data.data.accessToken);
         localStorage.setItem('refreshToken', data.data.refreshToken);
+        console.log('💾 Auth context: User data stored in localStorage');
       } else {
-        throw new Error('Registration failed');
+        console.error('❌ Auth context: Registration failed with status:', response.status);
+        throw new Error(data.message || 'Registration failed');
       }
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('❌ Auth context: Registration error:', error);
       throw error;
     }
   };

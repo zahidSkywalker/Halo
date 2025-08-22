@@ -73,8 +73,10 @@ export default function RegisterPage() {
     if (!validateForm()) return;
     
     setIsLoading(true);
+    console.log('🚀 Starting registration process...');
 
     try {
+      console.log('📝 Calling auth context register function...');
       // Use the auth context register function
       await register({
         email: formData.email,
@@ -83,14 +85,26 @@ export default function RegisterPage() {
         password: formData.password,
       });
 
+      console.log('✅ Registration successful!');
+      console.log('🔄 Attempting to redirect to dashboard...');
+
       toast({
         title: 'Welcome to HALO!',
         description: 'Your account has been created successfully.',
       });
 
       // Redirect to dashboard
+      console.log('📍 Router push to /dashboard');
       router.push('/dashboard');
+      console.log('✅ Router push completed');
+      
+      // Fallback redirect if router doesn't work
+      setTimeout(() => {
+        console.log('🔄 Fallback redirect using window.location');
+        window.location.href = '/dashboard';
+      }, 1000);
     } catch (error) {
+      console.error('❌ Registration error:', error);
       toast({
         title: 'Registration failed',
         description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
