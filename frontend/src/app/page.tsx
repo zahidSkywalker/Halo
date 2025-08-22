@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { AnimatedLogo } from '@/components/ui/morphing-logo';
 import { 
   Heart, 
   MessageCircle, 
@@ -103,10 +105,7 @@ export default function HomePage() {
         <div className="container-responsive">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-primary to-purple-600">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold gradient-text">HALO</span>
+              <AnimatedLogo />
             </div>
             
             <nav className="hidden md:flex items-center space-x-8">
@@ -182,7 +181,7 @@ export default function HomePage() {
               {statsData.map((stat) => (
                 <div key={stat.label} className="text-center">
                   <div className="text-3xl font-bold text-primary">
-                    {isLoadingStats ? '...' : stat.value}
+                    {isLoadingStats ? <LoadingSpinner /> : stat.value}
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
                   {stats.realData && (
@@ -259,10 +258,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="flex items-center space-x-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-primary to-purple-600">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-xl font-bold gradient-text">HALO</span>
+                <AnimatedLogo />
               </div>
               <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
                 Building meaningful connections in the digital age.

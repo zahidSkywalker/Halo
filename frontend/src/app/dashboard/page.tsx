@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Home, 
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPost, setNewPost] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingFeed, setIsLoadingFeed] = useState(true);
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
   const { toast } = useToast();
@@ -69,6 +71,7 @@ export default function DashboardPage() {
 
   const fetchFeed = async () => {
     try {
+      setIsLoadingFeed(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/posts/feed', {
         headers: {
@@ -82,6 +85,8 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Error fetching feed:', error);
+    } finally {
+      setIsLoadingFeed(false);
     }
   };
 
@@ -99,7 +104,7 @@ export default function DashboardPage() {
         },
         body: JSON.stringify({
           content: newPost,
-          hashtags: extractHashtags(newPost),
+          hashtags: newPost.match(/#\w+/g) || [],
         }),
       });
 
@@ -107,11 +112,14 @@ export default function DashboardPage() {
         setNewPost('');
         fetchFeed();
         toast({
-          title: 'Post created!',
-          description: 'Your post has been shared successfully.',
+          title: 'Success!',
+          description: 'Your post has been created.',
         });
+      } else {
+        throw new Error('Failed to create post');
       }
     } catch (error) {
+      console.error('Error creating post:', error);
       toast({
         title: 'Error',
         description: 'Failed to create post. Please try again.',
@@ -120,11 +128,6 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const extractHashtags = (content: string): string[] => {
-    const hashtagRegex = /#[\w]+/g;
-    return content.match(hashtagRegex) || [];
   };
 
   const handleLike = async (postId: string) => {
@@ -138,11 +141,7 @@ export default function DashboardPage() {
       });
 
       if (response.ok) {
-        setPosts(posts.map(post => 
-          post.id === postId 
-            ? { ...post, isLiked: !post.isLiked, likesCount: post.isLiked ? post.likesCount - 1 : post.likesCount + 1 }
-            : post
-        ));
+        fetchFeed();
       }
     } catch (error) {
       console.error('Error liking post:', error);
@@ -156,6 +155,14 @@ export default function DashboardPage() {
     router.push('/auth/login');
   };
 
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" text="Loading..." />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -163,7 +170,7 @@ export default function DashboardPage() {
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-halo-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-white font-bold">H</span>
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">HALO</h1>
@@ -260,9 +267,9 @@ export default function DashboardPage() {
                       <Button 
                         onClick={handleCreatePost}
                         disabled={isLoading || !newPost.trim()}
-                        className="bg-halo-500 hover:bg-halo-600"
+                        className="bg-primary hover:bg-primary/90"
                       >
-                        {isLoading ? 'Posting...' : 'Post'}
+                        {isLoading ? <LoadingSpinner size="sm" /> : 'Post'}
                       </Button>
                     </div>
                   </div>
@@ -272,77 +279,85 @@ export default function DashboardPage() {
 
             {/* Posts Feed */}
             <div className="space-y-4">
-              {posts.map((post) => (
-                <Card key={post.id}>
-                  <CardContent className="p-4">
-                    <div className="flex space-x-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={post.author.profilePicture} />
-                        <AvatarFallback>{post.author.displayName.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            {post.author.displayName}
-                          </span>
-                          {post.author.isVerified && (
-                            <Badge variant="secondary" className="text-xs">✓</Badge>
-                          )}
-                          <span className="text-gray-500 text-sm">@{post.author.username}</span>
-                          <span className="text-gray-400 text-sm">•</span>
-                          <span className="text-gray-400 text-sm">
-                            {new Date(post.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        
-                        <p className="text-gray-900 dark:text-white mb-3">{post.content}</p>
-                        
-                        {post.hashtags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {post.hashtags.map((hashtag, index) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {hashtag}
+              <h2 className="text-2xl font-bold">Your Feed</h2>
+              
+              {isLoadingFeed ? (
+                <div className="flex justify-center py-12">
+                  <LoadingSpinner size="lg" text="Loading your feed..." />
+                </div>
+              ) : posts.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      No posts yet. Be the first to share something!
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                posts.map((post) => (
+                  <Card key={post.id}>
+                    <CardContent className="p-4">
+                      <div className="flex space-x-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={post.author.profilePicture} />
+                          <AvatarFallback>{post.author.displayName.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="font-semibold">{post.author.displayName}</span>
+                            {post.author.isVerified && (
+                              <Badge variant="secondary" className="text-xs">
+                                ✓ Verified
                               </Badge>
-                            ))}
+                            )}
+                            <span className="text-sm text-gray-500">
+                              {new Date(post.createdAt).toLocaleDateString()}
+                            </span>
                           </div>
-                        )}
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-6">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleLike(post.id)}
-                              className={post.isLiked ? 'text-red-500' : ''}
-                            >
-                              <Heart className={`h-4 w-4 mr-1 ${post.isLiked ? 'fill-current' : ''}`} />
-                              {post.likesCount}
-                            </Button>
+                          
+                          <p className="text-gray-900 dark:text-gray-100 mb-3">
+                            {post.content}
+                          </p>
+                          
+                          {post.hashtags.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {post.hashtags.map((tag, index) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleLike(post.id)}
+                                className={post.isLiked ? 'text-red-500' : ''}
+                              >
+                                <Heart className={`h-4 w-4 mr-2 ${post.isLiked ? 'fill-current' : ''}`} />
+                                {post.likesCount}
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                {post.commentsCount}
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Share2 className="h-4 w-4 mr-2" />
+                                {post.sharesCount}
+                              </Button>
+                            </div>
                             <Button variant="ghost" size="sm">
-                              <MessageSquare className="h-4 w-4 mr-1" />
-                              {post.commentsCount}
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Share2 className="h-4 w-4 mr-1" />
-                              {post.sharesCount}
+                              <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </div>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              
-              {posts.length === 0 && (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <p className="text-gray-500">No posts yet. Create your first post!</p>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ))
               )}
             </div>
           </div>
@@ -350,23 +365,18 @@ export default function DashboardPage() {
           {/* Right Sidebar */}
           <div className="lg:col-span-1">
             <Card className="sticky top-6">
-              <CardHeader>
-                <h3 className="font-semibold">Trending</h3>
-              </CardHeader>
               <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="text-sm">
-                    <p className="font-medium text-gray-900 dark:text-white">#HALO</p>
-                    <p className="text-gray-500">1.2K posts</p>
-                  </div>
-                  <div className="text-sm">
-                    <p className="font-medium text-gray-900 dark:text-white">#SocialMedia</p>
-                    <p className="text-gray-500">856 posts</p>
-                  </div>
-                  <div className="text-sm">
-                    <p className="font-medium text-gray-900 dark:text-white">#Innovation</p>
-                    <p className="text-gray-500">543 posts</p>
-                  </div>
+                <h3 className="font-semibold mb-4">Trending Topics</h3>
+                <div className="space-y-2">
+                  <Badge variant="secondary" className="w-full justify-center">
+                    #Technology
+                  </Badge>
+                  <Badge variant="secondary" className="w-full justify-center">
+                    #Innovation
+                  </Badge>
+                  <Badge variant="secondary" className="w-full justify-center">
+                    #SocialMedia
+                  </Badge>
                 </div>
               </CardContent>
             </Card>

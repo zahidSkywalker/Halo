@@ -288,6 +288,45 @@
     padding-right: env(safe-area-inset-right);
   }
 
+  /* Logo morphing animations */
+  .logo-morph {
+    animation: logoMorph 8s infinite ease-in-out;
+  }
+
+  @keyframes logoMorph {
+    0%, 25% { transform: scale(1) rotate(0deg); }
+    12.5% { transform: scale(1.1) rotate(5deg); }
+    50%, 75% { transform: scale(1) rotate(0deg); }
+    62.5% { transform: scale(1.1) rotate(-5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+  /* Floating particles */
+  .particle-float {
+    animation: particleFloat 3s ease-in-out infinite;
+  }
+
+  @keyframes particleFloat {
+    0%, 100% { transform: translateY(0px); opacity: 0.7; }
+    50% { transform: translateY(-10px); opacity: 1; }
+  }
+
+  /* Glow pulse */
+  .glow-pulse {
+    animation: glowPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes glowPulse {
+    0%, 100% { 
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+      filter: brightness(1);
+    }
+    50% { 
+      box-shadow: 0 0 40px rgba(99, 102, 241, 0.6);
+      filter: brightness(1.1);
+    }
+  }
+
   /* Print utilities */
   @media print {
     .print-hidden {
