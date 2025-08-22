@@ -95,6 +95,15 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'feed' | 'trending' | 'following'>('feed');
   
+  // Real-time stats state
+  const [userStats, setUserStats] = useState({
+    posts: 0,
+    followers: 0,
+    following: 0,
+    likes: 0
+  });
+  const [trendingTopics, setTrendingTopics] = useState<Array<{tag: string, count: number}>>([]);
+  
   const router = useRouter();
   const { toast } = useToast();
 
@@ -112,6 +121,8 @@ export default function DashboardPage() {
     fetchFeed();
     fetchSuggestedUsers();
     fetchNotifications();
+    fetchUserStats();
+    fetchTrendingTopics();
   }, [router]);
 
   const fetchFeed = async () => {
@@ -172,6 +183,49 @@ export default function DashboardPage() {
     }
   };
 
+  // Fetch user stats
+  const fetchUserStats = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`/api/users/${user?.username}/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserStats({
+          posts: data.data.posts || 0,
+          followers: data.data.followers || 0,
+          following: data.data.following || 0,
+          likes: data.data.likes || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+    }
+  };
+
+  // Fetch trending topics
+  const fetchTrendingTopics = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('/api/posts/trending', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTrendingTopics(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching trending topics:', error);
+    }
+  };
+
   const handleCreatePost = async () => {
     if (!newPost.trim() && selectedMedia.length === 0) return;
 
@@ -198,12 +252,18 @@ export default function DashboardPage() {
         setPosts([data.data, ...posts]);
         setNewPost('');
         setSelectedMedia([]);
+        
+        // Refresh stats after successful post
+        fetchUserStats();
+        fetchTrendingTopics();
+        
         toast({
           title: 'Success!',
           description: 'Your post has been created successfully!',
         });
       } else {
-        throw new Error('Failed to create post');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create post');
       }
     } catch (error) {
       console.error('Error creating post:', error);
@@ -682,12 +742,22 @@ export default function DashboardPage() {
                 <h3 className="text-lg font-semibold">Trending Topics</h3>
               </CardHeader>
               <CardContent className="space-y-3">
-                {['#HALO', '#TechNews', '#Innovation', '#Community', '#DigitalAge'].map((topic) => (
-                  <div key={topic} className="flex items-center justify-between">
-                    <span className="text-blue-600 font-medium">{topic}</span>
-                    <span className="text-xs text-gray-500">1.2K posts</span>
-                  </div>
-                ))}
+                {trendingTopics.length > 0 ? (
+                  trendingTopics.map((topic) => (
+                    <div key={topic.tag} className="flex items-center justify-between">
+                      <span className="text-blue-600 font-medium">#{topic.tag}</span>
+                      <span className="text-xs text-gray-500">{topic.count} posts</span>
+                    </div>
+                  ))
+                ) : (
+                  // Fallback to default topics if no trending data
+                  ['#HALO', '#TechNews', '#Innovation', '#Community', '#DigitalAge'].map((topic) => (
+                    <div key={topic} className="flex items-center justify-between">
+                      <span className="text-blue-600 font-medium">{topic}</span>
+                      <span className="text-xs text-gray-500">0 posts</span>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -699,19 +769,19 @@ export default function DashboardPage() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Posts</span>
-                  <span className="font-semibold">12</span>
+                  <span className="font-semibold">{userStats.posts}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Followers</span>
-                  <span className="font-semibold">156</span>
+                  <span className="font-semibold">{userStats.followers}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Following</span>
-                  <span className="font-semibold">89</span>
+                  <span className="font-semibold">{userStats.following}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Likes</span>
-                  <span className="font-semibold">1.2K</span>
+                  <span className="font-semibold">{userStats.likes}</span>
                 </div>
               </CardContent>
             </Card>

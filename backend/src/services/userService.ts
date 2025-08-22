@@ -438,4 +438,54 @@ export class UserService {
       throw new Error('Failed to get user suggestions');
     }
   }
+
+  // Get user stats
+  static async getUserStats(userId: string): Promise<{
+    posts: number;
+    followers: number;
+    following: number;
+    likes: number;
+  }> {
+    try {
+      // Get posts count
+      const postsResult = await database.query(
+        'SELECT COUNT(*) as count FROM posts WHERE author_id = $1 AND is_deleted = false',
+        [userId]
+      );
+
+      // Get followers count
+      const followersResult = await database.query(
+        'SELECT COUNT(*) as count FROM follows WHERE followed_id = $1',
+        [userId]
+      );
+
+      // Get following count
+      const followingResult = await database.query(
+        'SELECT COUNT(*) as count FROM follows WHERE follower_id = $1',
+        [userId]
+      );
+
+      // Get total likes received
+      const likesResult = await database.query(
+        'SELECT COUNT(*) as count FROM likes l INNER JOIN posts p ON l.post_id = p.id WHERE p.author_id = $1 AND p.is_deleted = false',
+        [userId]
+      );
+
+      return {
+        posts: parseInt(postsResult.rows[0].count),
+        followers: parseInt(followersResult.rows[0].count),
+        following: parseInt(followingResult.rows[0].count),
+        likes: parseInt(likesResult.rows[0].count)
+      };
+    } catch (error) {
+      console.error('Error getting user stats:', error);
+      // Return default values if there's an error
+      return {
+        posts: 0,
+        followers: 0,
+        following: 0,
+        likes: 0
+      };
+    }
+  }
 }

@@ -737,4 +737,23 @@ router.post('/:postId/media', authenticateToken, asyncHandler(async (req, res) =
   });
 }));
 
+// Get trending topics
+router.get('/trending', authenticateToken, asyncHandler(async (req, res) => {
+  try {
+    // Get trending hashtags based on post count
+    const trendingTopics = await PostService.getTrendingTopics();
+    
+    res.json({
+      success: true,
+      data: trendingTopics
+    });
+  } catch (error) {
+    console.error('Error fetching trending topics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch trending topics'
+    });
+  }
+}));
+
 export default router;

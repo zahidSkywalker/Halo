@@ -584,4 +584,35 @@ export class PostService {
       throw new Error('Failed to share post');
     }
   }
+
+  // Get trending topics (hashtags)
+  static async getTrendingTopics(): Promise<Array<{tag: string, count: number}>> {
+    try {
+      const result = await database.query(
+        `SELECT h.name as tag, COUNT(ph.post_id) as count
+         FROM hashtags h
+         INNER JOIN post_hashtags ph ON h.id = ph.hashtag_id
+         INNER JOIN posts p ON ph.post_id = p.id
+         WHERE p.is_deleted = false
+         GROUP BY h.id, h.name
+         ORDER BY count DESC
+         LIMIT 10`
+      );
+
+      return result.rows.map(row => ({
+        tag: row.tag,
+        count: parseInt(row.count)
+      }));
+    } catch (error) {
+      console.error('Error fetching trending topics:', error);
+      // Return default topics if there's an error
+      return [
+        { tag: 'HALO', count: 0 },
+        { tag: 'TechNews', count: 0 },
+        { tag: 'Innovation', count: 0 },
+        { tag: 'Community', count: 0 },
+        { tag: 'DigitalAge', count: 0 }
+      ];
+    }
+  }
 }

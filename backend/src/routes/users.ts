@@ -607,4 +607,34 @@ router.get('/suggestions', authenticateToken, asyncHandler(async (req, res) => {
   });
 }));
 
+// Get user stats
+router.get('/:username/stats', authenticateToken, asyncHandler(async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    // Get user by username first
+    const user = await UserService.getUserByUsername(username);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Get user stats
+    const stats = await UserService.getUserStats(user.id);
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user stats'
+    });
+  }
+}));
+
 export default router;
