@@ -20,6 +20,7 @@ import userRoutes from './routes/users';
 import postRoutes from './routes/posts';
 import statsRoutes from './routes/stats';
 import notificationRoutes from './routes/notifications';
+import setupRoutes from './routes/setup';
 
 // Load environment variables
 dotenv.config();
@@ -98,6 +99,8 @@ app.use('/api/stats', statsRoutes);
 console.log('✅ Stats routes registered');
 app.use('/api/notifications', notificationRoutes);
 console.log('✅ Notification routes registered');
+app.use('/api/setup', setupRoutes);
+console.log('✅ Setup routes registered');
 console.log('🔗 All API routes registered successfully');
 
 // Setup Swagger documentation
