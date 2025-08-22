@@ -58,12 +58,47 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint to show registered routes
+app.get('/debug/routes', (req, res) => {
+  const routes: any[] = [];
+  app._router.stack.forEach((middleware: any) => {
+    if (middleware.route) {
+      routes.push({
+        path: middleware.route.path,
+        methods: Object.keys(middleware.route.methods)
+      });
+    } else if (middleware.name === 'router') {
+      middleware.handle.stack.forEach((handler: any) => {
+        if (handler.route) {
+          routes.push({
+            path: middleware.regexp.source.replace('^\\/','').replace('\\/?(?=\\/|$)','') + handler.route.path,
+            methods: Object.keys(handler.route.methods)
+          });
+        }
+      });
+    }
+  });
+  
+  res.json({
+    success: true,
+    routes: routes,
+    message: 'Available routes'
+  });
+});
+
 // API Routes
+console.log('🔗 Registering API routes...');
 app.use('/api/auth', authRoutes);
+console.log('✅ Auth routes registered');
 app.use('/api/users', userRoutes);
+console.log('✅ User routes registered');
 app.use('/api/posts', postRoutes);
+console.log('✅ Post routes registered');
 app.use('/api/stats', statsRoutes);
+console.log('✅ Stats routes registered');
 app.use('/api/notifications', notificationRoutes);
+console.log('✅ Notification routes registered');
+console.log('🔗 All API routes registered successfully');
 
 // Setup Swagger documentation
 setupSwagger(app);
