@@ -1,45 +1,58 @@
 import { Request, Response, NextFunction } from 'express';
-import { RateLimiterRedis } from 'rate-limiter-flexible';
-import { getRedisClient } from '../config/redis';
 import { RateLimitError } from './errorHandler';
 
-const redis = getRedisClient();
+// Simple in-memory rate limiter (works without Redis)
+class MemoryRateLimiter {
+  private store: Map<string, { count: number; resetTime: number }> = new Map();
+  private points: number;
+  private duration: number;
+  private blockDuration: number;
 
-// General rate limiter
-const generalLimiter = new RateLimiterRedis({
-  storeClient: redis.rateLimiterClient,
-  keyPrefix: 'general',
-  points: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
-  duration: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000') / 1000, // Convert to seconds
-  blockDuration: 60 * 15, // Block for 15 minutes
-});
+  constructor(points: number, duration: number, blockDuration: number) {
+    this.points = points;
+    this.duration = duration;
+    this.blockDuration = blockDuration;
+  }
 
-// Auth rate limiter (more strict)
-const authLimiter = new RateLimiterRedis({
-  storeClient: redis.rateLimiterClient,
-  keyPrefix: 'auth',
-  points: 5, // 5 attempts
-  duration: 60 * 15, // 15 minutes
-  blockDuration: 60 * 60, // Block for 1 hour
-});
+  async consume(key: string): Promise<void> {
+    const now = Date.now();
+    const record = this.store.get(key);
 
-// Upload rate limiter
-const uploadLimiter = new RateLimiterRedis({
-  storeClient: redis.rateLimiterClient,
-  keyPrefix: 'upload',
-  points: 10, // 10 uploads
-  duration: 60 * 60, // 1 hour
-  blockDuration: 60 * 30, // Block for 30 minutes
-});
+    if (!record || now > record.resetTime) {
+      // First request or reset time passed
+      this.store.set(key, {
+        count: 1,
+        resetTime: now + this.duration * 1000
+      });
+      return;
+    }
 
-// Search rate limiter
-const searchLimiter = new RateLimiterRedis({
-  storeClient: redis.rateLimiterClient,
-  keyPrefix: 'search',
-  points: 30, // 30 searches
-  duration: 60 * 5, // 5 minutes
-  blockDuration: 60 * 10, // Block for 10 minutes
-});
+    if (record.count >= this.points) {
+      // Rate limit exceeded
+      const error: any = new Error('Rate limit exceeded');
+      error.msBeforeNext = record.resetTime - now;
+      throw error;
+    }
+
+    // Increment count
+    record.count++;
+  }
+
+  async delete(key: string): Promise<void> {
+    this.store.delete(key);
+  }
+}
+
+// Create rate limiters
+const generalLimiter = new MemoryRateLimiter(
+  parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
+  parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000') / 1000,
+  60 * 15 // 15 minutes
+);
+
+const authLimiter = new MemoryRateLimiter(5, 60 * 15, 60 * 60); // 5 attempts, 15 min window, 1 hour block
+const uploadLimiter = new MemoryRateLimiter(10, 60 * 60, 60 * 30); // 10 uploads, 1 hour window, 30 min block
+const searchLimiter = new MemoryRateLimiter(30, 60 * 5, 60 * 10); // 30 searches, 5 min window, 10 min block
 
 // Get client IP
 const getClientIP = (req: Request): string => {
@@ -161,14 +174,7 @@ export const userRateLimiter = async (req: Request, res: Response, next: NextFun
       return next();
     }
 
-    const userLimiter = new RateLimiterRedis({
-      storeClient: redis.rateLimiterClient,
-      keyPrefix: `user:${userId}`,
-      points: 1000, // 1000 requests
-      duration: 60 * 60, // 1 hour
-      blockDuration: 60 * 30, // Block for 30 minutes
-    });
-
+    const userLimiter = new MemoryRateLimiter(1000, 60 * 60, 60 * 30); // 1000 requests, 1 hour, 30 min block
     await userLimiter.consume(userId);
     next();
   } catch (error: any) {
@@ -202,7 +208,7 @@ export const resetRateLimit = async (identifier: string, type: 'general' | 'auth
 };
 
 // Get limiter by type
-const getLimiterByType = (type: string): RateLimiterRedis => {
+const getLimiterByType = (type: string): MemoryRateLimiter => {
   switch (type) {
     case 'auth':
       return authLimiter;
