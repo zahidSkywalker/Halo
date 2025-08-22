@@ -14,7 +14,6 @@ class RedisClient {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379'),
         connectTimeout: 2000, // 2 second timeout
-        commandTimeout: 1000, // 1 second command timeout
       },
       password: process.env.REDIS_PASSWORD || undefined,
     });
