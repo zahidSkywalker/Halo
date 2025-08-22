@@ -226,17 +226,63 @@ export default function DashboardPage() {
     }
   };
 
+  // Test API connection
+  const testAPI = async () => {
+    try {
+      console.log('🧪 Testing API connection...');
+      const token = localStorage.getItem('accessToken');
+      console.log('🔑 Token present:', !!token);
+      
+      const response = await fetch('/api/health', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      console.log('📡 Health check response:', response.status);
+      const data = await response.json();
+      console.log('📄 Health check data:', data);
+      
+      toast({
+        title: 'API Test',
+        description: `API Status: ${response.status} - ${data.status || 'Unknown'}`,
+      });
+    } catch (error) {
+      console.error('❌ API test failed:', error);
+      toast({
+        title: 'API Test Failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleCreatePost = async () => {
-    if (!newPost.trim() && selectedMedia.length === 0) return;
+    if (!newPost.trim() && selectedMedia.length === 0) {
+      toast({
+        title: 'Empty Post',
+        description: 'Please add some content or media to your post',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       const postData: any = {
         content: newPost.trim(),
         hashtags: extractHashtags(newPost),
         mentions: extractMentions(newPost)
       };
+
+      console.log('🚀 Creating post with data:', postData);
+      console.log('🔗 API URL: /api/posts');
+      console.log('🔑 Token present:', !!token);
 
       const response = await fetch('/api/posts', {
         method: 'POST',
@@ -247,8 +293,13 @@ export default function DashboardPage() {
         body: JSON.stringify(postData),
       });
 
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Post created successfully:', data);
+        
         setPosts([data.data, ...posts]);
         setNewPost('');
         setSelectedMedia([]);
@@ -258,18 +309,19 @@ export default function DashboardPage() {
         fetchTrendingTopics();
         
         toast({
-          title: 'Success!',
+          title: 'Success! 🎉',
           description: 'Your post has been created successfully!',
         });
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create post');
+        console.error('❌ Backend error:', errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      console.error('Error creating post:', error);
+      console.error('❌ Error creating post:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to create post. Please try again.',
+        title: 'Error Creating Post',
+        description: error instanceof Error ? error.message : 'Failed to create post. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -403,6 +455,16 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Test API Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={testAPI}
+                className="text-xs"
+              >
+                🧪 Test API
+              </Button>
+
               {/* Search */}
               <div className="relative hidden md:block">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
