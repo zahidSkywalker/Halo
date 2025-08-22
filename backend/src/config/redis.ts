@@ -214,7 +214,7 @@ class RedisClient {
       return await this.client.rPop(key);
     } catch (error) {
       console.warn('Redis RPOP error (non-critical):', error);
-      return 0;
+      return null;
     }
   }
 
