@@ -46,7 +46,7 @@ CREATE TABLE users (
     email_verification_token VARCHAR(255),
     password_reset_token VARCHAR(255),
     password_reset_expires TIMESTAMP,
-    last_login TIMESTAMP,
+    last_login_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
