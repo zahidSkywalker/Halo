@@ -174,4 +174,69 @@ router.get('/status', async (req, res) => {
   }
 });
 
+// Test database connection and basic operations
+router.get('/test-db', async (req, res) => {
+  try {
+    console.log('🧪 Testing database connection and operations...');
+    
+    // Test basic connection
+    const db = getDatabase();
+    const client = await db.getClient();
+    console.log('✅ Database client obtained');
+    
+    // Test if posts table exists
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'posts'
+      );
+    `);
+    
+    const postsTableExists = tableCheck.rows[0].exists;
+    console.log('📊 Posts table exists:', postsTableExists);
+    
+    if (postsTableExists) {
+      // Test if we can query the posts table
+      const postCount = await client.query('SELECT COUNT(*) as count FROM posts');
+      console.log('📊 Total posts in database:', postCount.rows[0].count);
+      
+      // Test if we can insert a test record (will be rolled back)
+      await client.query('BEGIN');
+      const testInsert = await client.query(`
+        INSERT INTO posts (content, author_id) 
+        VALUES ($1, $2) 
+        RETURNING id
+      `, ['TEST POST - WILL BE ROLLED BACK', '00000000-0000-0000-0000-000000000000']);
+      
+      console.log('✅ Test insert successful, ID:', testInsert.rows[0].id);
+      await client.query('ROLLBACK');
+      console.log('✅ Test insert rolled back');
+    }
+    
+    client.release();
+    
+    res.json({
+      success: true,
+      database: {
+        connected: true,
+        postsTableExists,
+        canQuery: postsTableExists,
+        canInsert: postsTableExists
+      },
+      message: 'Database test completed'
+    });
+    
+  } catch (error) {
+    console.error('❌ Database test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Database test failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }
+    });
+  }
+});
+
 export default router;
