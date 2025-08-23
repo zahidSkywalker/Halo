@@ -4,6 +4,12 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Force drop all tables and recreate (clean slate)
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO public;
+
 -- Drop existing tables if they exist (in reverse dependency order)
 DROP TABLE IF EXISTS reports CASCADE;
 DROP TABLE IF EXISTS user_sessions CASCADE;
