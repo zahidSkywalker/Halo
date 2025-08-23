@@ -71,11 +71,12 @@ export default function HomePage() {
     countries: '50+',
     realData: false
   });
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [isLoadingStats, setIsLoadingStats] = useState(false); // Changed to false
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  // Temporarily disabled API call to prevent blank page
+  // useEffect(() => {
+  //   fetchStats();
+  // }, []);
 
   const fetchStats = async () => {
     try {
