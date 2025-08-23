@@ -129,7 +129,7 @@ export default function DashboardPage() {
     try {
       setIsLoadingFeed(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/posts/feed', {
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/posts/feed', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -149,7 +149,7 @@ export default function DashboardPage() {
   const fetchSuggestedUsers = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/users/suggestions', {
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/users/suggestions', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -167,7 +167,7 @@ export default function DashboardPage() {
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/notifications', {
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/notifications', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -187,7 +187,7 @@ export default function DashboardPage() {
   const fetchUserStats = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/users/${user?.username}/stats`, {
+      const response = await fetch(`https://halo-backend-wye4.onrender.com/api/users/${user?.username}/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -197,7 +197,7 @@ export default function DashboardPage() {
         const data = await response.json();
         setUserStats({
           posts: data.data.posts || 0,
-          followers: data.data.followers || 0,
+          followers: data.data.following || 0,
           following: data.data.following || 0,
           likes: data.data.likes || 0
         });
@@ -211,7 +211,7 @@ export default function DashboardPage() {
   const fetchTrendingTopics = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/posts/trending', {
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/posts/trending', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -233,19 +233,40 @@ export default function DashboardPage() {
       const token = localStorage.getItem('accessToken');
       console.log('🔑 Token present:', !!token);
       
-      const response = await fetch('/api/health', {
+      // Test both local API and direct backend
+      console.log('🔍 Testing local API rewrite...');
+      const localResponse = await fetch('/api/health', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
       
-      console.log('📡 Health check response:', response.status);
-      const data = await response.json();
-      console.log('📄 Health check data:', data);
+      console.log('📡 Local API response:', localResponse.status);
+      
+      // Test direct backend
+      console.log('🔍 Testing direct backend...');
+      const directResponse = await fetch('https://halo-backend-wye4.onrender.com/health', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      console.log('📡 Direct backend response:', directResponse.status);
+      
+      // Test posts endpoint
+      console.log('🔍 Testing posts endpoint...');
+      const postsResponse = await fetch('https://halo-backend-wye4.onrender.com/api/posts', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      console.log('📡 Posts endpoint response:', postsResponse.status);
       
       toast({
-        title: 'API Test',
-        description: `API Status: ${response.status} - ${data.status || 'Unknown'}`,
+        title: 'API Test Complete',
+        description: `Local: ${localResponse.status}, Direct: ${directResponse.status}, Posts: ${postsResponse.status}`,
       });
     } catch (error) {
       console.error('❌ API test failed:', error);
@@ -281,10 +302,10 @@ export default function DashboardPage() {
       };
 
       console.log('🚀 Creating post with data:', postData);
-      console.log('🔗 API URL: /api/posts');
+      console.log('🔗 API URL: https://halo-backend-wye4.onrender.com/api/posts');
       console.log('🔑 Token present:', !!token);
 
-      const response = await fetch('/api/posts', {
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/posts', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -332,7 +353,7 @@ export default function DashboardPage() {
   const handleLike = async (postId: string) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/posts/${postId}/like`, {
+      const response = await fetch(`https://halo-backend-wye4.onrender.com/api/posts/${postId}/like`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -359,7 +380,7 @@ export default function DashboardPage() {
   const handleFollow = async (userId: string) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/users/${userId}/follow`, {
+      const response = await fetch(`https://halo-backend-wye4.onrender.com/api/users/${userId}/follow`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
