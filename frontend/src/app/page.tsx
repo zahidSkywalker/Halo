@@ -84,6 +84,8 @@ export default function HomePage() {
     setSetupMessage('Initializing database... This may take a few minutes.');
     
     try {
+      console.log('🚀 Starting database initialization...');
+      
       const response = await fetch('https://halo-backend-wye4.onrender.com/api/setup/init-database', {
         method: 'POST',
         headers: {
@@ -91,7 +93,12 @@ export default function HomePage() {
         },
       });
       
+      console.log('📡 Response received:', response);
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response statusText:', response.statusText);
+      
       const data = await response.json();
+      console.log('📄 Response data:', data);
       
       if (data.success) {
         setSetupStatus('success');
@@ -99,11 +106,20 @@ export default function HomePage() {
       } else {
         setSetupStatus('error');
         setSetupMessage(`Database initialization failed: ${data.message || 'Unknown error'}`);
+        console.error('❌ Database initialization failed:', data);
       }
     } catch (error) {
       setSetupStatus('error');
       setSetupMessage('Error initializing database');
-      console.error('Database initialization failed:', error);
+      console.error('❌ Database initialization error:', error);
+      
+      if (error instanceof Error) {
+        console.error('❌ Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
     }
   };
 
