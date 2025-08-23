@@ -39,6 +39,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(helmet());
+
 // Parse CORS origins from environment variable
 const corsOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
@@ -46,22 +47,32 @@ const corsOrigins = process.env.CORS_ORIGIN
 
 console.log('🌐 CORS Origins:', corsOrigins);
 
+// Enhanced CORS configuration
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
     
-    if (corsOrigins.indexOf(origin) !== -1) {
+    // Check if origin is in allowed list
+    if (corsOrigins.includes(origin)) {
+      console.log('✅ CORS: Allowing origin:', origin);
       callback(null, true);
     } else {
-      console.log('🚫 CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      console.log('🚫 CORS: Blocking origin:', origin);
+      console.log('🚫 CORS: Allowed origins:', corsOrigins);
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
+  exposedHeaders: ['Content-Length', 'X-Requested-With'],
+  maxAge: 86400 // 24 hours
 }));
+
 app.use(compression());
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
@@ -83,17 +94,29 @@ app.get('/health', (req, res) => {
   });
 });
 
-// CORS preflight handler
-app.options('*', (req, res) => {
-  console.log('🔄 CORS preflight request from:', req.get('Origin') || 'No origin');
-  console.log('🔄 Request method:', req.method);
-  console.log('🔄 Request headers:', req.headers);
+// CORS debug endpoint
+app.get('/cors-debug', (req, res) => {
+  const origin = req.get('Origin');
+  const userAgent = req.get('User-Agent');
+  const referer = req.get('Referer');
   
-  res.header('Access-Control-Allow-Origin', req.get('Origin') || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).end();
+  console.log('🔍 CORS Debug Request:');
+  console.log('  Origin:', origin);
+  console.log('  User-Agent:', userAgent);
+  console.log('  Referer:', referer);
+  console.log('  Allowed origins:', corsOrigins);
+  
+  res.status(200).json({
+    success: true,
+    cors: {
+      requestOrigin: origin,
+      allowedOrigins: corsOrigins,
+      isAllowed: origin ? corsOrigins.includes(origin) : true,
+      userAgent: userAgent,
+      referer: referer
+    },
+    message: 'CORS debug information'
+  });
 });
 
 // Debug endpoint to show registered routes
