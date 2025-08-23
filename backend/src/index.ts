@@ -39,9 +39,28 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(helmet());
+// Parse CORS origins from environment variable
+const corsOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000'];
+
+console.log('🌐 CORS Origins:', corsOrigins);
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (corsOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('🚫 CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(compression());
 app.use(morgan('combined'));
@@ -56,11 +75,25 @@ app.use(rateLimiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  console.log('🏥 Health check request from:', req.get('Origin') || 'No origin');
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
+});
+
+// CORS preflight handler
+app.options('*', (req, res) => {
+  console.log('🔄 CORS preflight request from:', req.get('Origin') || 'No origin');
+  console.log('🔄 Request method:', req.method);
+  console.log('🔄 Request headers:', req.headers);
+  
+  res.header('Access-Control-Allow-Origin', req.get('Origin') || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
 });
 
 // Debug endpoint to show registered routes
