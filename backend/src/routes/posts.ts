@@ -83,17 +83,38 @@ const shareSchema = Joi.object({
  *         description: Unauthorized
  */
 router.post('/', authenticateToken, asyncHandler(async (req, res) => {
-  const { error, value } = createPostSchema.validate(req.body);
-  if (error) {
-    throw new ValidationError(error.details[0].message);
-  }
-
-  const post = await PostService.createPost(req.user!.id, value);
+  console.log('📝 Post creation request received');
+  console.log('📝 Request body:', req.body);
+  console.log('📝 User from token:', req.user);
+  console.log('📝 Headers:', req.headers);
   
-  res.status(201).json({
-    success: true,
-    data: post
-  });
+  try {
+    const { error, value } = createPostSchema.validate(req.body);
+    if (error) {
+      console.log('❌ Validation error:', error.details[0].message);
+      throw new ValidationError(error.details[0].message);
+    }
+    
+    console.log('✅ Validation passed, creating post...');
+    console.log('✅ Post data:', value);
+    console.log('✅ User ID:', req.user!.id);
+    
+    const post = await PostService.createPost(req.user!.id, value);
+    console.log('✅ Post created successfully:', post);
+    
+    res.status(201).json({
+      success: true,
+      data: post
+    });
+  } catch (error) {
+    console.error('❌ Error in post creation route:', error);
+    console.error('❌ Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
+    throw error;
+  }
 }));
 
 /**

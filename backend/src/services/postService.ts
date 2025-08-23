@@ -16,58 +16,86 @@ export class PostService {
 
   // Create a new post
   static async createPost(authorId: string, postData: CreatePostData): Promise<Post> {
+    console.log('🔧 PostService.createPost called with:', { authorId, postData });
+    
     const { content, media, hashtags, mentions } = postData;
 
     // Validate content
     if (!content || content.trim().length === 0) {
+      console.log('❌ Content validation failed: empty content');
       throw new ValidationError('Post content cannot be empty');
     }
 
     if (content.length > 1000) {
+      console.log('❌ Content validation failed: too long');
       throw new ValidationError('Post content cannot exceed 1000 characters');
     }
 
+    console.log('✅ Content validation passed');
+
     // Start transaction
+    console.log('🔄 Starting database transaction...');
     const client = await database.getClient();
+    console.log('✅ Database client obtained');
+    
     try {
+      console.log('🔄 Beginning transaction...');
       await client.query('BEGIN');
+      console.log('✅ Transaction begun');
 
       // Create post
+      console.log('🔄 Creating post in database...');
       const postResult = await client.query(
         `INSERT INTO posts (content, author_id)
          VALUES ($1, $2)
          RETURNING *`,
         [content.trim(), authorId]
       );
+      console.log('✅ Post created in database:', postResult.rows[0]);
 
       const post = postResult.rows[0];
       const postId = post.id;
 
       // Process hashtags
       if (hashtags && hashtags.length > 0) {
+        console.log('🔄 Processing hashtags:', hashtags);
         await this.processHashtags(client, postId, hashtags);
+        console.log('✅ Hashtags processed');
       }
 
       // Process mentions
       if (mentions && mentions.length > 0) {
+        console.log('🔄 Processing mentions:', mentions);
         await this.processMentions(client, postId, mentions);
+        console.log('✅ Mentions processed');
       }
 
       // Process media
       if (media && media.length > 0) {
+        console.log('🔄 Processing media:', media);
         await this.processMedia(client, postId, media);
+        console.log('✅ Media processed');
       }
 
+      console.log('🔄 Committing transaction...');
       await client.query('COMMIT');
+      console.log('✅ Transaction committed');
 
       // Return complete post with author
-      return await this.getPostById(postId, authorId);
+      console.log('🔄 Fetching complete post...');
+      const completePost = await this.getPostById(postId, authorId);
+      console.log('✅ Complete post fetched:', completePost);
+      return completePost;
 
     } catch (error) {
+      console.error('❌ Error in createPost transaction:', error);
+      console.error('❌ Rolling back transaction...');
       await client.query('ROLLBACK');
       throw error;
     } finally {
+      console.log('🔄 Releasing database client...');
       client.release();
+      console.log('✅ Database client released');
     }
   }
 
