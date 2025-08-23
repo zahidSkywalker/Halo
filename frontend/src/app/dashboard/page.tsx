@@ -233,40 +233,63 @@ export default function DashboardPage() {
       const token = localStorage.getItem('accessToken');
       console.log('🔑 Token present:', !!token);
       
-      // Test both local API and direct backend
-      console.log('🔍 Testing local API rewrite...');
-      const localResponse = await fetch('/api/health', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      // Test direct backend health (no auth needed)
+      console.log('🔍 Testing direct backend health...');
+      try {
+        const healthResponse = await fetch('https://halo-backend-wye4.onrender.com/health');
+        console.log('📡 Health response status:', healthResponse.status);
+        const healthData = await healthResponse.json();
+        console.log('📄 Health data:', healthData);
+      } catch (healthError) {
+        console.error('❌ Health check failed:', healthError);
+      }
       
-      console.log('📡 Local API response:', localResponse.status);
+      // Test posts endpoint with auth
+      console.log('🔍 Testing posts endpoint with auth...');
+      try {
+        const postsResponse = await fetch('https://halo-backend-wye4.onrender.com/api/posts/', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log('📡 Posts response status:', postsResponse.status);
+        console.log('📡 Posts response headers:', Object.fromEntries(postsResponse.headers.entries()));
+        
+        if (postsResponse.ok) {
+          const postsData = await postsResponse.json();
+          console.log('📄 Posts data:', postsData);
+        } else {
+          const errorData = await postsResponse.text();
+          console.log('📄 Posts error:', errorData);
+        }
+      } catch (postsError) {
+        console.error('❌ Posts endpoint failed:', postsError);
+      }
       
-      // Test direct backend
-      console.log('🔍 Testing direct backend...');
-      const directResponse = await fetch('https://halo-backend-wye4.onrender.com/health', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      console.log('📡 Direct backend response:', directResponse.status);
-      
-      // Test posts endpoint
-      console.log('🔍 Testing posts endpoint...');
-      const postsResponse = await fetch('https://halo-backend-wye4.onrender.com/api/posts/', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      console.log('📡 Posts endpoint response:', postsResponse.status);
+      // Test CORS preflight
+      console.log('🔍 Testing CORS preflight...');
+      try {
+        const corsResponse = await fetch('https://halo-backend-wye4.onrender.com/api/posts/', {
+          method: 'OPTIONS',
+          headers: {
+            'Origin': window.location.origin,
+            'Access-Control-Request-Method': 'POST',
+            'Access-Control-Request-Headers': 'Content-Type, Authorization',
+          },
+        });
+        
+        console.log('📡 CORS preflight status:', corsResponse.status);
+        console.log('📡 CORS headers:', Object.fromEntries(corsResponse.headers.entries()));
+      } catch (corsError) {
+        console.error('❌ CORS preflight failed:', corsError);
+      }
       
       toast({
         title: 'API Test Complete',
-        description: `Local: ${localResponse.status}, Direct: ${directResponse.status}, Posts: ${postsResponse.status}`,
+        description: 'Check console for detailed results',
       });
     } catch (error) {
       console.error('❌ API test failed:', error);
@@ -305,6 +328,7 @@ export default function DashboardPage() {
       console.log('🔗 API URL: https://halo-backend-wye4.onrender.com/api/posts/');
       console.log('🔑 Token present:', !!token);
 
+      console.log('📡 Making fetch request...');
       const response = await fetch('https://halo-backend-wye4.onrender.com/api/posts/', {
         method: 'POST',
         headers: {
@@ -314,8 +338,11 @@ export default function DashboardPage() {
         body: JSON.stringify(postData),
       });
 
+      console.log('📡 Response received:', response);
       console.log('📡 Response status:', response.status);
+      console.log('📡 Response statusText:', response.statusText);
       console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('📡 Response ok:', response.ok);
 
       if (response.ok) {
         const data = await response.json();
@@ -334,9 +361,22 @@ export default function DashboardPage() {
           description: 'Your post has been created successfully!',
         });
       } else {
-        const errorData = await response.json();
-        console.error('❌ Backend error:', errorData);
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+          console.error('❌ Backend error data:', errorData);
+        } catch (parseError) {
+          console.error('❌ Could not parse error response:', parseError);
+          try {
+            const errorText = await response.text();
+            console.error('❌ Error response text:', errorText);
+            errorMessage = errorText || errorMessage;
+          } catch (textError) {
+            console.error('❌ Could not read error response:', textError);
+          }
+        }
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('❌ Error creating post:', error);
