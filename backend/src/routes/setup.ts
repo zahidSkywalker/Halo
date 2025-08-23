@@ -284,4 +284,82 @@ router.get('/check-user/:userId', async (req, res) => {
   }
 });
 
+// Check current authenticated user (requires JWT token)
+router.get('/check-current-user', async (req, res) => {
+  try {
+    // Get the Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: 'No authorization header provided'
+        }
+      });
+    }
+
+    const token = authHeader.split(' ')[1]; // Bearer TOKEN
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          message: 'No token provided'
+        }
+      });
+    }
+
+    console.log('🔍 Checking current user from token:', token.substring(0, 20) + '...');
+
+    // Verify the token
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    
+    const userId = decoded.userId;
+    console.log('🔍 User ID from token:', userId);
+
+    // Check if user exists in database
+    const db = getDatabase();
+    const client = await db.getClient();
+    
+    const userCheck = await client.query(
+      'SELECT id, username, email, display_name, is_active FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    const userExists = userCheck.rows.length > 0;
+    const user = userExists ? userCheck.rows[0] : null;
+    
+    console.log('🔍 Current user check result:', { userId, userExists, user });
+    
+    client.release();
+    
+    res.json({
+      success: true,
+      token: {
+        userId: decoded.userId,
+        email: decoded.email,
+        username: decoded.username,
+        iat: decoded.iat,
+        exp: decoded.exp
+      },
+      user: {
+        id: userId,
+        exists: userExists,
+        details: user
+      },
+      message: userExists ? 'User found in database' : 'User not found in database'
+    });
+    
+  } catch (error) {
+    console.error('❌ Current user check failed:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Current user check failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }
+    });
+  }
+});
+
 export default router;
