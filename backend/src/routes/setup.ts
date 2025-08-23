@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Client } from 'pg';
 import fs from 'fs';
 import path from 'path';
+import { getDatabase } from '../config/database';
 
 const router = Router();
 
