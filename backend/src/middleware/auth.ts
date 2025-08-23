@@ -62,6 +62,8 @@ export const authenticateToken = async (
       throw new AuthenticationError('Access token required');
     }
 
+    console.log('🔐 JWT Token received:', token.substring(0, 20) + '...');
+
     // Check if token is blacklisted (with fallback)
     const isBlacklisted = await safeRedisGet(`blacklist:${token}`);
     if (isBlacklisted) {
@@ -70,6 +72,13 @@ export const authenticateToken = async (
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    console.log('🔐 JWT Decoded:', {
+      userId: decoded.userId,
+      email: decoded.email,
+      username: decoded.username,
+      iat: decoded.iat,
+      exp: decoded.exp
+    });
     
     // Check if user still exists and is active (with fallback)
     const userExists = await safeRedisGet(`user:${decoded.userId}:active`);
@@ -86,6 +95,12 @@ export const authenticateToken = async (
       isVerified: decoded.isVerified,
       role: decoded.role
     };
+
+    console.log('✅ User authenticated:', {
+      id: req.user.id,
+      email: req.user.email,
+      username: req.user.username
+    });
 
     next();
   } catch (error) {

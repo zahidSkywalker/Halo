@@ -240,4 +240,48 @@ router.get('/test-db', async (req, res) => {
   }
 });
 
+// Check if a specific user exists in the database
+router.get('/check-user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log('🔍 Checking if user exists:', userId);
+    
+    const db = getDatabase();
+    const client = await db.getClient();
+    
+    // Check if user exists
+    const userCheck = await client.query(
+      'SELECT id, username, email, display_name, is_active FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    const userExists = userCheck.rows.length > 0;
+    const user = userExists ? userCheck.rows[0] : null;
+    
+    console.log('🔍 User check result:', { userId, userExists, user });
+    
+    client.release();
+    
+    res.json({
+      success: true,
+      user: {
+        id: userId,
+        exists: userExists,
+        details: user
+      },
+      message: userExists ? 'User found' : 'User not found'
+    });
+    
+  } catch (error) {
+    console.error('❌ User check failed:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'User check failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }
+    });
+  }
+});
+
 export default router;
