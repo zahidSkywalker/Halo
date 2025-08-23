@@ -269,12 +269,16 @@ export default function DashboardPage() {
         }
       } catch (healthError) {
         console.error('❌ Health check failed:', healthError);
-        console.error('❌ Health error details:', {
-          name: healthError.name,
-          message: healthError.message,
-          stack: healthError.stack,
-          cause: healthError.cause
-        });
+        if (healthError instanceof Error) {
+          console.error('❌ Health error details:', {
+            name: healthError.name,
+            message: healthError.message,
+            stack: healthError.stack,
+            cause: healthError.cause
+          });
+        } else {
+          console.error('❌ Health error (unknown type):', healthError);
+        }
       }
       
       // Test posts endpoint with auth
@@ -302,15 +306,19 @@ export default function DashboardPage() {
           const errorData = await postsResponse.text();
           console.log('📄 Posts error:', errorData);
         }
-      } catch (postsError) {
-        console.error('❌ Posts endpoint failed:', postsError);
-        console.error('❌ Posts error details:', {
-          name: postsError.name,
-          message: postsError.message,
-          stack: postsError.stack,
-          cause: postsError.cause
-        });
-      }
+              } catch (postsError) {
+          console.error('❌ Posts endpoint failed:', postsError);
+          if (postsError instanceof Error) {
+            console.error('❌ Posts error details:', {
+              name: postsError.name,
+              message: postsError.message,
+              stack: postsError.stack,
+              cause: postsError.cause
+            });
+          } else {
+            console.error('❌ Posts error (unknown type):', postsError);
+          }
+        }
       
       // Test CORS preflight
       console.log('🔍 Testing CORS preflight...');
@@ -329,15 +337,19 @@ export default function DashboardPage() {
         console.log('📡 CORS preflight response received:', corsResponse);
         console.log('📡 CORS preflight status:', corsResponse.status);
         console.log('📡 CORS headers:', Object.fromEntries(corsResponse.headers.entries()));
-      } catch (corsError) {
-        console.error('❌ CORS preflight failed:', corsError);
-        console.error('❌ CORS error details:', {
-          name: corsError.name,
-          message: corsError.message,
-          stack: corsError.stack,
-          cause: corsError.cause
-        });
-      }
+              } catch (corsError) {
+          console.error('❌ CORS preflight failed:', corsError);
+          if (corsError instanceof Error) {
+            console.error('❌ CORS error details:', {
+              name: corsError.name,
+              message: corsError.message,
+              stack: corsError.stack,
+              cause: corsError.cause
+            });
+          } else {
+            console.error('❌ CORS error (unknown type):', corsError);
+          }
+        }
       
       toast({
         title: 'API Test Complete',
@@ -345,12 +357,16 @@ export default function DashboardPage() {
       });
     } catch (error) {
       console.error('❌ API test failed:', error);
-      console.error('❌ Main error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        cause: error.cause
-      });
+      if (error instanceof Error) {
+        console.error('❌ Main error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          cause: error.cause
+        });
+      } else {
+        console.error('❌ Main error (unknown type):', error);
+      }
       toast({
         title: 'API Test Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
