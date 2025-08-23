@@ -72,10 +72,40 @@ export default function HomePage() {
     realData: false
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [setupStatus, setSetupStatus] = useState<'idle' | 'initializing' | 'success' | 'error'>('idle');
+  const [setupMessage, setSetupMessage] = useState('');
 
   useEffect(() => {
     fetchStats();
   }, []);
+
+  const initializeDatabase = async () => {
+    setSetupStatus('initializing');
+    setSetupMessage('Initializing database... This may take a few minutes.');
+    
+    try {
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/setup/init-database', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setSetupStatus('success');
+        setSetupMessage('Database initialized successfully! All tables created and ready to use.');
+      } else {
+        setSetupStatus('error');
+        setSetupMessage(`Database initialization failed: ${data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      setSetupStatus('error');
+      setSetupMessage('Error initializing database');
+      console.error('Database initialization failed:', error);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -249,6 +279,53 @@ export default function HomePage() {
                 </Button>
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Database Setup Section - For Development/Admin Use */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-800">
+        <div className="container-responsive">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl dark:text-white mb-4">
+              Database Setup
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              If you're experiencing login or registration issues, this may help initialize the database.
+            </p>
+            
+            {/* Setup Status */}
+            {setupMessage && (
+              <div className={`mb-4 p-3 rounded-lg ${
+                setupStatus === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                setupStatus === 'error' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+              }`}>
+                {setupMessage}
+              </div>
+            )}
+            
+            {/* Setup Button */}
+            <Button 
+              onClick={initializeDatabase}
+              disabled={setupStatus === 'initializing'}
+              variant="outline"
+              size="lg"
+              className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+            >
+              {setupStatus === 'initializing' ? (
+                <>
+                  <LoadingSpinner />
+                  Initializing Database...
+                </>
+              ) : (
+                'Initialize Database'
+              )}
+            </Button>
+            
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+              This will reset the database with the correct schema. Use only if needed.
+            </p>
           </div>
         </div>
       </section>
