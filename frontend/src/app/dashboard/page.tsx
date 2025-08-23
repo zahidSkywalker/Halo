@@ -255,7 +255,7 @@ export default function DashboardPage() {
       
       // Test posts endpoint
       console.log('🔍 Testing posts endpoint...');
-      const postsResponse = await fetch('https://halo-backend-wye4.onrender.com/api/posts', {
+      const postsResponse = await fetch('https://halo-backend-wye4.onrender.com/api/posts/', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -302,10 +302,10 @@ export default function DashboardPage() {
       };
 
       console.log('🚀 Creating post with data:', postData);
-      console.log('🔗 API URL: https://halo-backend-wye4.onrender.com/api/posts');
+      console.log('🔗 API URL: https://halo-backend-wye4.onrender.com/api/posts/');
       console.log('🔑 Token present:', !!token);
 
-      const response = await fetch('https://halo-backend-wye4.onrender.com/api/posts', {
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/posts/', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
