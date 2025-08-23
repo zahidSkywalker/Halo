@@ -1,14 +1,22 @@
 -- HALO Social Media Platform Database Schema
 -- PostgreSQL initialization script
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- Force drop all tables and recreate (clean slate)
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
 GRANT ALL ON SCHEMA public TO postgres;
 GRANT ALL ON SCHEMA public TO public;
+
+-- Enable UUID extension (with proper error handling)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'uuid-ossp') THEN
+        CREATE EXTENSION "uuid-ossp";
+    END IF;
+END $$;
+
+-- Verify UUID extension is working
+SELECT uuid_generate_v4() as test_uuid;
 
 -- Drop existing tables if they exist (in reverse dependency order)
 DROP TABLE IF EXISTS reports CASCADE;
