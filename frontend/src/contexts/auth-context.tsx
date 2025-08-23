@@ -55,6 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('🔐 Auth context: Starting login...', { email });
       console.log('🌐 Auth context: Making API call to backend login endpoint');
+      console.log('🔗 Backend URL: https://halo-backend-wye4.onrender.com/api/auth/login');
       
       const response = await fetch('https://halo-backend-wye4.onrender.com/api/auth/login', {
         method: 'POST',
@@ -66,7 +67,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('📡 Auth context: Login response received:', response);
       console.log('📡 Auth context: Login response status:', response.status);
+      console.log('📡 Auth context: Login response statusText:', response.statusText);
       console.log('📡 Auth context: Login response headers:', Object.fromEntries(response.headers.entries()));
 
       if (response.ok) {
@@ -77,13 +80,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('accessToken', data.data.accessToken);
         localStorage.setItem('refreshToken', data.data.refreshToken);
       } else {
-        const errorData = await response.json();
-        console.error('❌ Auth context: Login failed with status:', response.status);
-        console.error('❌ Auth context: Login error data:', errorData);
-        throw new Error(errorData.message || 'Login failed');
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+          console.error('❌ Auth context: Login failed with status:', response.status);
+          console.error('❌ Auth context: Login error data:', errorData);
+        } catch (parseError) {
+          console.error('❌ Auth context: Could not parse error response:', parseError);
+          try {
+            const errorText = await response.text();
+            console.error('❌ Auth context: Error response text:', errorText);
+            errorMessage = errorText || errorMessage;
+          } catch (textError) {
+            console.error('❌ Auth context: Could not read error response:', textError);
+          }
+        }
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('❌ Auth context: Login error:', error);
+      if (error instanceof Error) {
+        console.error('❌ Auth context: Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      } else {
+        console.error('❌ Auth context: Unknown error type:', error);
+      }
       throw error;
     }
   };

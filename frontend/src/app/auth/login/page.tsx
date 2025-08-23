@@ -22,6 +22,73 @@ export default function LoginPage() {
   const { toast } = useToast();
   const { login } = useAuth();
 
+  // Test basic connectivity first
+  const testBasicConnectivity = async () => {
+    try {
+      console.log('🧪 Testing basic network connectivity...');
+      const response = await fetch('https://httpbin.org/get');
+      console.log('✅ Basic network test passed:', response.status);
+      toast({
+        title: 'Network Test',
+        description: 'Basic internet connectivity is working',
+      });
+    } catch (error) {
+      console.error('❌ Basic network test failed:', error);
+      toast({
+        title: 'Network Test Failed',
+        description: 'Basic internet connectivity is not working',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Test backend health
+  const testBackendHealth = async () => {
+    try {
+      console.log('🧪 Testing backend health...');
+      const response = await fetch('https://halo-backend-wye4.onrender.com/health', {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log('📡 Backend health response status:', response.status);
+      console.log('📡 Backend health response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📄 Backend health data:', data);
+        toast({
+          title: 'Backend Health Test',
+          description: 'Backend is reachable and healthy!',
+        });
+      } else {
+        const errorData = await response.text();
+        console.log('📄 Backend health error:', errorData);
+        toast({
+          title: 'Backend Health Test',
+          description: `Status: ${response.status} - ${errorData}`,
+        });
+      }
+    } catch (error) {
+      console.error('❌ Backend health test failed:', error);
+      if (error instanceof Error) {
+        console.error('❌ Backend health error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
+      toast({
+        title: 'Backend Health Test Failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Test auth endpoint
   const testAuthEndpoint = async () => {
     try {
@@ -56,6 +123,13 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error('❌ Auth endpoint test failed:', error);
+      if (error instanceof Error) {
+        console.error('❌ Auth endpoint error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
       toast({
         title: 'Auth Endpoint Test Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -105,15 +179,32 @@ export default function LoginPage() {
             <CardDescription>
               Enter your credentials to access your HALO account
             </CardDescription>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={testAuthEndpoint}
-              className="mt-2"
-            >
-              🧪 Test Auth Endpoint
-            </Button>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={testBasicConnectivity}
+              >
+                🌐 Test Network
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={testBackendHealth}
+              >
+                🏥 Test Backend
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={testAuthEndpoint}
+              >
+                🔐 Test Auth
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
