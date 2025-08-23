@@ -269,16 +269,15 @@ export default function DashboardPage() {
         }
       } catch (healthError) {
         console.error('❌ Health check failed:', healthError);
-        if (healthError instanceof Error) {
-          console.error('❌ Health error details:', {
-            name: healthError.name,
-            message: healthError.message,
-            stack: healthError.stack,
-            cause: healthError.cause
-          });
-        } else {
-          console.error('❌ Health error (unknown type):', healthError);
-        }
+                  if (healthError instanceof Error) {
+            console.error('❌ Health error details:', {
+              name: healthError.name,
+              message: healthError.message,
+              stack: healthError.stack
+            });
+          } else {
+            console.error('❌ Health error (unknown type):', healthError);
+          }
       }
       
       // Test posts endpoint with auth
@@ -312,8 +311,7 @@ export default function DashboardPage() {
             console.error('❌ Posts error details:', {
               name: postsError.name,
               message: postsError.message,
-              stack: postsError.stack,
-              cause: postsError.cause
+              stack: postsError.stack
             });
           } else {
             console.error('❌ Posts error (unknown type):', postsError);
@@ -343,8 +341,7 @@ export default function DashboardPage() {
             console.error('❌ CORS error details:', {
               name: corsError.name,
               message: corsError.message,
-              stack: corsError.stack,
-              cause: corsError.cause
+              stack: corsError.stack
             });
           } else {
             console.error('❌ CORS error (unknown type):', corsError);
@@ -357,16 +354,15 @@ export default function DashboardPage() {
       });
     } catch (error) {
       console.error('❌ API test failed:', error);
-      if (error instanceof Error) {
-        console.error('❌ Main error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-          cause: error.cause
-        });
-      } else {
-        console.error('❌ Main error (unknown type):', error);
-      }
+              if (error instanceof Error) {
+          console.error('❌ Main error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          });
+        } else {
+          console.error('❌ Main error (unknown type):', error);
+        }
       toast({
         title: 'API Test Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
