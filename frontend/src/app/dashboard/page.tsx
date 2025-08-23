@@ -230,31 +230,68 @@ export default function DashboardPage() {
   const testAPI = async () => {
     try {
       console.log('🧪 Testing API connection...');
+      console.log('🌐 Current origin:', window.location.origin);
+      console.log('🔗 Backend URL:', 'https://halo-backend-wye4.onrender.com');
+      
       const token = localStorage.getItem('accessToken');
       console.log('🔑 Token present:', !!token);
+      
+      // Test basic network connectivity
+      console.log('🔍 Testing basic network connectivity...');
+      try {
+        const testResponse = await fetch('https://httpbin.org/get');
+        console.log('✅ Basic network test passed:', testResponse.status);
+      } catch (networkError) {
+        console.error('❌ Basic network test failed:', networkError);
+      }
       
       // Test direct backend health (no auth needed)
       console.log('🔍 Testing direct backend health...');
       try {
-        const healthResponse = await fetch('https://halo-backend-wye4.onrender.com/health');
+        console.log('📡 Making health request...');
+        const healthResponse = await fetch('https://halo-backend-wye4.onrender.com/health', {
+          method: 'GET',
+          mode: 'cors',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        console.log('📡 Health response received:', healthResponse);
         console.log('📡 Health response status:', healthResponse.status);
-        const healthData = await healthResponse.json();
-        console.log('📄 Health data:', healthData);
+        console.log('📡 Health response headers:', Object.fromEntries(healthResponse.headers.entries()));
+        
+        if (healthResponse.ok) {
+          const healthData = await healthResponse.json();
+          console.log('📄 Health data:', healthData);
+        } else {
+          const errorText = await healthResponse.text();
+          console.log('📄 Health error text:', errorText);
+        }
       } catch (healthError) {
         console.error('❌ Health check failed:', healthError);
+        console.error('❌ Health error details:', {
+          name: healthError.name,
+          message: healthError.message,
+          stack: healthError.stack,
+          cause: healthError.cause
+        });
       }
       
       // Test posts endpoint with auth
       console.log('🔍 Testing posts endpoint with auth...');
       try {
+        console.log('📡 Making posts request...');
         const postsResponse = await fetch('https://halo-backend-wye4.onrender.com/api/posts/', {
           method: 'GET',
+          mode: 'cors',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
           },
         });
         
+        console.log('📡 Posts response received:', postsResponse);
         console.log('📡 Posts response status:', postsResponse.status);
         console.log('📡 Posts response headers:', Object.fromEntries(postsResponse.headers.entries()));
         
@@ -267,13 +304,21 @@ export default function DashboardPage() {
         }
       } catch (postsError) {
         console.error('❌ Posts endpoint failed:', postsError);
+        console.error('❌ Posts error details:', {
+          name: postsError.name,
+          message: postsError.message,
+          stack: postsError.stack,
+          cause: postsError.cause
+        });
       }
       
       // Test CORS preflight
       console.log('🔍 Testing CORS preflight...');
       try {
+        console.log('📡 Making CORS preflight request...');
         const corsResponse = await fetch('https://halo-backend-wye4.onrender.com/api/posts/', {
           method: 'OPTIONS',
+          mode: 'cors',
           headers: {
             'Origin': window.location.origin,
             'Access-Control-Request-Method': 'POST',
@@ -281,10 +326,17 @@ export default function DashboardPage() {
           },
         });
         
+        console.log('📡 CORS preflight response received:', corsResponse);
         console.log('📡 CORS preflight status:', corsResponse.status);
         console.log('📡 CORS headers:', Object.fromEntries(corsResponse.headers.entries()));
       } catch (corsError) {
         console.error('❌ CORS preflight failed:', corsError);
+        console.error('❌ CORS error details:', {
+          name: corsError.name,
+          message: corsError.message,
+          stack: corsError.stack,
+          cause: corsError.cause
+        });
       }
       
       toast({
@@ -293,6 +345,12 @@ export default function DashboardPage() {
       });
     } catch (error) {
       console.error('❌ API test failed:', error);
+      console.error('❌ Main error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause
+      });
       toast({
         title: 'API Test Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -329,11 +387,24 @@ export default function DashboardPage() {
       console.log('🔑 Token present:', !!token);
 
       console.log('📡 Making fetch request...');
-      const response = await fetch('https://halo-backend-wye4.onrender.com/api/posts/', {
+      console.log('📡 Request details:', {
+        url: 'https://halo-backend-wye4.onrender.com/api/posts/',
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+        },
+        body: postData,
+        mode: 'cors'
+      });
+      
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/posts/', {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(postData),
       });
