@@ -53,23 +53,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/login', {
+      console.log('🔐 Auth context: Starting login...', { email });
+      console.log('🌐 Auth context: Making API call to backend login endpoint');
+      
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'cors',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('📡 Auth context: Login response status:', response.status);
+      console.log('📡 Auth context: Login response headers:', Object.fromEntries(response.headers.entries()));
+
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Auth context: Login successful, setting user data');
         setUser(data.data.user);
         localStorage.setItem('user', JSON.stringify(data.data.user));
         localStorage.setItem('accessToken', data.data.accessToken);
         localStorage.setItem('refreshToken', data.data.refreshToken);
       } else {
-        throw new Error('Login failed');
+        const errorData = await response.json();
+        console.error('❌ Auth context: Login failed with status:', response.status);
+        console.error('❌ Auth context: Login error data:', errorData);
+        throw new Error(errorData.message || 'Login failed');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Auth context: Login error:', error);
       throw error;
     }
   };
@@ -84,14 +98,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: any) => {
     console.log('🔐 Auth context: Starting registration...', userData);
     try {
-      console.log('🌐 Auth context: Making API call to /api/auth/register');
-      const response = await fetch('/api/auth/register', {
+      console.log('🌐 Auth context: Making API call to backend register endpoint');
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'cors',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(userData),
       });
 
       console.log('📡 Auth context: API response status:', response.status);
+      console.log('📡 Auth context: API response headers:', Object.fromEntries(response.headers.entries()));
       const data = await response.json();
       console.log('📄 Auth context: API response data:', data);
 

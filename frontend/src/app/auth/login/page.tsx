@@ -22,11 +22,54 @@ export default function LoginPage() {
   const { toast } = useToast();
   const { login } = useAuth();
 
+  // Test auth endpoint
+  const testAuthEndpoint = async () => {
+    try {
+      console.log('🧪 Testing auth endpoint...');
+      const response = await fetch('https://halo-backend-wye4.onrender.com/api/auth/login', {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ email: 'test@test.com', password: 'test123' }),
+      });
+      
+      console.log('📡 Auth test response status:', response.status);
+      console.log('📡 Auth test response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📄 Auth test response data:', data);
+        toast({
+          title: 'Auth Endpoint Test',
+          description: 'Auth endpoint is working!',
+        });
+      } else {
+        const errorData = await response.text();
+        console.log('📄 Auth test error:', errorData);
+        toast({
+          title: 'Auth Endpoint Test',
+          description: `Status: ${response.status} - ${errorData}`,
+        });
+      }
+    } catch (error) {
+      console.error('❌ Auth endpoint test failed:', error);
+      toast({
+        title: 'Auth Endpoint Test Failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      console.log('🚀 Starting login process...');
       // Use the auth context login function
       await login(email, password);
 
@@ -35,9 +78,11 @@ export default function LoginPage() {
         description: 'Successfully logged in to HALO.',
       });
 
+      console.log('✅ Login successful, redirecting to dashboard...');
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (error) {
+      console.error('❌ Login failed:', error);
       toast({
         title: 'Login failed',
         description: error instanceof Error ? error.message : 'Invalid email or password.',
@@ -60,6 +105,15 @@ export default function LoginPage() {
             <CardDescription>
               Enter your credentials to access your HALO account
             </CardDescription>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={testAuthEndpoint}
+              className="mt-2"
+            >
+              🧪 Test Auth Endpoint
+            </Button>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
